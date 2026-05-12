@@ -27,10 +27,10 @@ const r = (s: string) => s.replace(/^\n/, "");
 
 export const blocks: Block[] = [
   {
-    id: "core",
-    emoji: "🔵",
-    title: "Core React — Основы",
-    description: "Фундамент — без этого дальше нельзя",
+    id: "react",
+    emoji: "⚛️",
+    title: "React",
+    description: "Всё про React — от JSX и хуков до производительности и TypeScript",
     topics: [
       {
         id: "jsx",
@@ -552,14 +552,6 @@ export default function App() {
           },
         ],
       },
-    ],
-  },
-  {
-    id: "hooks",
-    emoji: "🟡",
-    title: "Hooks глубоко",
-    description: "Всё о хуках — это 80% современного React",
-    topics: [
       {
         id: "useref",
         title: "useRef",
@@ -967,14 +959,6 @@ export default function App() {
           },
         ],
       },
-    ],
-  },
-  {
-    id: "state-mgmt",
-    emoji: "🟠",
-    title: "State Management",
-    description: "Управление глобальным состоянием",
-    topics: [
       {
         id: "context-api",
         title: "Context API",
@@ -1134,14 +1118,6 @@ export default function App() {
           },
         ],
       },
-    ],
-  },
-  {
-    id: "perf",
-    emoji: "🔴",
-    title: "Производительность",
-    description: "React под капотом и оптимизации",
-    topics: [
       {
         id: "react-memo",
         title: "React.memo",
@@ -1275,14 +1251,6 @@ export default function App() {
           },
         ],
       },
-    ],
-  },
-  {
-    id: "routing",
-    emoji: "🟣",
-    title: "Роутинг",
-    description: "Навигация в SPA",
-    topics: [
       {
         id: "react-router",
         title: "React Router v6",
@@ -1312,14 +1280,6 @@ export default function App() {
         `),
         examples: [],
       },
-    ],
-  },
-  {
-    id: "forms",
-    emoji: "🟢",
-    title: "Формы",
-    description: "Работа с формами и валидацией",
-    topics: [
       {
         id: "rhf",
         title: "React Hook Form",
@@ -1374,14 +1334,6 @@ export default function App() {
           },
         ],
       },
-    ],
-  },
-  {
-    id: "typescript",
-    emoji: "🔷",
-    title: "TypeScript + React",
-    description: "Типизация компонентов",
-    topics: [
       {
         id: "props-types",
         title: "Props типы",
