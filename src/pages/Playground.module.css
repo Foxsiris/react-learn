@@ -1,0 +1,126 @@
+.page {
+  height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.toolbar {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.left h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.templLabel {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.tplBtn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.tplBtn:hover {
+  border-color: var(--border-hover);
+  background: #30363d;
+}
+
+.resetBtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.resetBtn:hover {
+  color: var(--red);
+  border-color: var(--red);
+}
+
+.editor {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  background: #1e1e1e;
+}
+
+.editorPane {
+  min-width: 0;
+  overflow: auto;
+  border-right: 1px solid var(--border);
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13.5px;
+}
+
+.codeArea {
+  min-height: 100%;
+  caret-color: #fff;
+}
+
+.codeArea :global(.prism-code) {
+  background: transparent !important;
+  outline: none;
+}
+
+.codeArea textarea:focus {
+  outline: none;
+}
+
+.previewPane {
+  background: var(--bg);
+  color: var(--text);
+  padding: 16px;
+  overflow: auto;
+  min-width: 0;
+  position: relative;
+}
+
+.error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #2d0d0d;
+  border: 1px solid #6a1f1f;
+  border-radius: 6px;
+  color: #ff8a8a;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}

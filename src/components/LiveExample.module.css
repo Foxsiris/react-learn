@@ -1,0 +1,56 @@
+.wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 0;
+  background: #1e1e1e;
+  min-height: 420px;
+}
+
+@media (max-width: 900px) {
+  .wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+.editor {
+  border-right: 1px solid #30363d;
+  min-width: 0;
+  overflow: auto;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13.5px;
+}
+
+.editorInner {
+  min-height: 100%;
+  caret-color: #fff;
+}
+
+.editorInner :global(.prism-code) {
+  background: transparent !important;
+  outline: none;
+}
+
+.editorInner textarea:focus {
+  outline: none;
+}
+
+.preview {
+  background: var(--bg);
+  color: var(--text);
+  padding: 16px;
+  overflow: auto;
+  min-width: 0;
+  position: relative;
+}
+
+.error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #2d0d0d;
+  border: 1px solid #6a1f1f;
+  border-radius: 6px;
+  color: #ff8a8a;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}

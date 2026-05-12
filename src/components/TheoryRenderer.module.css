@@ -1,0 +1,53 @@
+.theory {
+  line-height: 1.65;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.theory p {
+  margin: 12px 0;
+}
+
+.theory ul, .theory ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.theory li {
+  margin: 4px 0;
+}
+
+.theory h2 {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  font-size: 20px;
+}
+
+.theory h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 17px;
+}
+
+.theory strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.table {
+  border-collapse: collapse;
+  margin: 14px 0;
+  width: 100%;
+  font-size: 14px;
+}
+
+.table th, .table td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.table th {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+}
