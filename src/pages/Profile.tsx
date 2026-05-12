@@ -21,11 +21,11 @@ function SectionTitle({ icon, title, action }: { icon: React.ReactNode; title: s
 function statusToActivityType(status: string): { icon: React.ReactNode; tint: string; color: string; verb: string } {
   switch (status) {
     case "done":
-      return { icon: <I.done size={16} />, tint: "var(--success-soft)", color: "var(--success)", verb: "Закрыл" };
+      return { icon: <I.done size={16} />, tint: "var(--st-done-bg)", color: "var(--st-done)", verb: "Закрыл" };
     case "review":
-      return { icon: <I.pause size={16} />, tint: "var(--warning-soft)", color: "#8c6a1f", verb: "Отметил на повторение" };
+      return { icon: <I.pause size={16} />, tint: "var(--st-pause-bg)", color: "var(--st-pause)", verb: "Отметил на повторение" };
     case "skip":
-      return { icon: <I.skip size={16} />, tint: "var(--bg-2)", color: "var(--muted)", verb: "Пропустил" };
+      return { icon: <I.skip size={16} />, tint: "var(--st-skip-bg)", color: "var(--st-skip)", verb: "Пропустил" };
     default:
       return { icon: <I.book size={15} />, tint: "var(--accent-tint)", color: "var(--accent-deep)", verb: "Начал" };
   }
@@ -115,9 +115,9 @@ export default function Profile() {
       </div>
 
       <div className="grid-4">
-        <Stat label="Изучено" value={`${stats.doneCount}`} icon={<I.done size={20} />} tint="var(--success-soft)" color="var(--success)" />
-        <Stat label="Повторить" value={`${stats.reviewCount}`} icon={<I.pause size={20} />} tint="var(--warning-soft)" color="#8c6a1f" />
-        <Stat label="Пропущено" value={`${stats.skipCount}`} icon={<I.skip size={20} />} tint="var(--bg-2)" color="var(--muted)" />
+        <Stat label="Изучено" value={`${stats.doneCount}`} icon={<I.done size={20} />} tint="var(--st-done-bg)" color="var(--st-done)" />
+        <Stat label="Повторить" value={`${stats.reviewCount}`} icon={<I.pause size={20} />} tint="var(--st-pause-bg)" color="var(--st-pause)" />
+        <Stat label="Пропущено" value={`${stats.skipCount}`} icon={<I.skip size={20} />} tint="var(--st-skip-bg)" color="var(--st-skip)" />
         <Stat label="Не начато" value={`${stats.todoCount}`} icon={<I.book size={18} />} tint="var(--info-soft)" color="var(--info)" />
       </div>
 

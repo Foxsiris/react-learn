@@ -142,22 +142,22 @@ export default function Catalog() {
                       <div className="row between" style={{ marginBottom: 6 }}>
                         <h3 style={{ fontSize: 15.5 }}>{t.title}</h3>
                         {status === "done" && (
-                          <span className="chip success">
+                          <span className="chip status-done">
                             <I.done size={12} /> Готово
                           </span>
                         )}
                         {status === "review" && (
-                          <span className="chip warning">
+                          <span className="chip status-pause">
                             <I.pause size={12} /> Повторить
                           </span>
                         )}
                         {status === "skip" && (
-                          <span className="chip">
+                          <span className="chip status-skip">
                             <I.skip size={12} /> пропущено
                           </span>
                         )}
                         {isCurrent && status === "todo" && (
-                          <span className="chip accent pulse">
+                          <span className="chip status-current pulse">
                             <I.current size={12} /> сейчас
                           </span>
                         )}

@@ -24,6 +24,18 @@
   --info: #4a6da7;
   --info-soft: #e0e8f3;
   --heart: #e85a2b;
+  --st-done: #10b981;
+  --st-done-bg: #d1fae5;
+  --st-done-border: #6ee7b7;
+  --st-pause: #f59e0b;
+  --st-pause-bg: #fef3c7;
+  --st-pause-border: #fcd34d;
+  --st-skip: #ef4444;
+  --st-skip-bg: #fee2e2;
+  --st-skip-border: #fca5a5;
+  --st-current: #3b82f6;
+  --st-current-bg: #dbeafe;
+  --st-current-border: #93c5fd;
   --radius-sm: 8px;
   --radius: 12px;
   --radius-lg: 20px;
@@ -176,6 +188,10 @@ html[data-anim="off"] *::after {
 .chip.success { background: var(--success-soft); color: var(--success); border-color: #cbe0bf; }
 .chip.warning { background: var(--warning-soft); color: #8c6a1f; border-color: #ecdaa8; }
 .chip.info { background: var(--info-soft); color: var(--info); border-color: #cad6ea; }
+.chip.status-done    { background: var(--st-done-bg);    color: var(--st-done);    border-color: var(--st-done-border); }
+.chip.status-pause   { background: var(--st-pause-bg);   color: var(--st-pause);   border-color: var(--st-pause-border); }
+.chip.status-skip    { background: var(--st-skip-bg);    color: var(--st-skip);    border-color: var(--st-skip-border); }
+.chip.status-current { background: var(--st-current-bg); color: var(--st-current); border-color: var(--st-current-border); }
 .chip.dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; }
 
 h1, h2, h3, h4 { margin: 0; font-weight: 700; letter-spacing: -0.015em; }
@@ -282,7 +298,9 @@ h3 { font-size: 17px; }
 @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
 .pop { animation: pop 260ms var(--ease); }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(232, 90, 43, 0.5); } 50% { box-shadow: 0 0 0 8px rgba(232, 90, 43, 0); } }
+@keyframes pulse-blue { 0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); } 50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); } }
 .pulse { animation: pulse 1.8s var(--ease) infinite; }
+.chip.status-current.pulse { animation-name: pulse-blue; }
 
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -362,8 +380,8 @@ h3 { font-size: 17px; }
   font-weight: 800; font-size: 18px; color: var(--muted);
   transition: transform var(--t-fast) var(--ease);
 }
-.road-node.done .road-blob { background: var(--success); color: white; border-color: var(--success); }
-.road-node.current .road-blob { background: var(--accent); color: white; border-color: var(--accent); box-shadow: var(--shadow-pop); }
+.road-node.done .road-blob { background: var(--st-done); color: white; border-color: var(--st-done); }
+.road-node.current .road-blob { background: var(--st-current); color: white; border-color: var(--st-current); box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35); }
 .road-node.locked .road-blob { background: var(--bg-2); }
 .road-node.locked .road-card { opacity: 0.65; }
 .road-empty {
@@ -425,7 +443,7 @@ h3 { font-size: 17px; }
   background: var(--accent-tint); color: var(--accent-deep);
   display: grid; place-items: center;
 }
-.quest .qbox.done { background: var(--success-soft); color: var(--success); }
+.quest .qbox.done { background: var(--st-done-bg); color: var(--st-done); }
 
 .hearts-bar { display: inline-flex; gap: 2px; }
 .hearts-bar svg { width: 14px; height: 14px; }

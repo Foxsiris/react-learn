@@ -99,7 +99,7 @@ export default function Achievements() {
             <div style={{ fontWeight: 700, fontSize: 14 }}>{a.title}</div>
             <div className="small muted" style={{ fontSize: 11.5, minHeight: 28 }}>{a.sub}</div>
             {a.earned ? (
-              <div className="chip success" style={{ fontSize: 10.5 }}>
+              <div className="chip status-done" style={{ fontSize: 10.5 }}>
                 <I.done size={11} /> получено
               </div>
             ) : a.target != null && a.progress != null ? (

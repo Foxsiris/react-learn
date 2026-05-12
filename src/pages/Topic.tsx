@@ -100,11 +100,11 @@ export default function TopicPage() {
               {STATUS_ORDER.map((s) => {
                 const active = status === s.key;
                 const Ico = I[s.icon];
-                const activeColor =
-                  s.key === "done"   ? "var(--success)" :
-                  s.key === "review" ? "#8c6a1f" :
-                  s.key === "skip"   ? "var(--muted)" :
-                                       "var(--accent)";
+                const tone =
+                  s.key === "done"   ? { fg: "var(--st-done)",  bg: "var(--st-done-bg)",  border: "var(--st-done-border)" } :
+                  s.key === "review" ? { fg: "var(--st-pause)", bg: "var(--st-pause-bg)", border: "var(--st-pause-border)" } :
+                  s.key === "skip"   ? { fg: "var(--st-skip)",  bg: "var(--st-skip-bg)",  border: "var(--st-skip-border)" } :
+                                       { fg: "var(--muted)",    bg: "var(--bg-2)",        border: "var(--border-strong)" };
                 return (
                   <button
                     key={s.key}
@@ -117,9 +117,9 @@ export default function TopicPage() {
                       fireToast(s.toastMsg);
                     }}
                     style={{
-                      border: "1px solid " + (active ? activeColor : "var(--border)"),
-                      background: active ? "var(--accent-tint)" : "var(--surface)",
-                      color: active ? activeColor : "var(--muted)",
+                      border: "1px solid " + (active ? tone.border : "var(--border)"),
+                      background: active ? tone.bg : "var(--surface)",
+                      color: active ? tone.fg : "var(--muted)",
                       borderRadius: 8,
                       padding: "6px 8px",
                       display: "grid",
@@ -225,7 +225,7 @@ function TopicOutlineDot({ index, topicId }: { index: number; topicId: string })
   const isDone = status === "done";
   const isReview = status === "review";
   const isSkip = status === "skip";
-  const bg = isDone ? "var(--success)" : isReview ? "var(--warning)" : isSkip ? "var(--muted-2)" : "var(--bg-2)";
+  const bg = isDone ? "var(--st-done)" : isReview ? "var(--st-pause)" : isSkip ? "var(--st-skip)" : "var(--bg-2)";
   const color = isDone || isReview || isSkip ? "white" : "var(--muted)";
   return (
     <span
