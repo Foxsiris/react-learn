@@ -135,19 +135,23 @@ export default function Catalog() {
                         <h3 style={{ fontSize: 15.5 }}>{t.title}</h3>
                         {status === "done" && (
                           <span className="chip success">
-                            <I.check size={11} /> Готово
+                            <I.done size={12} /> Готово
                           </span>
                         )}
                         {status === "review" && (
                           <span className="chip warning">
-                            <I.refresh size={11} /> Повторить
+                            <I.pause size={12} /> Повторить
                           </span>
                         )}
                         {status === "skip" && (
-                          <span className="chip">пропущено</span>
+                          <span className="chip">
+                            <I.skip size={12} /> пропущено
+                          </span>
                         )}
                         {isCurrent && status === "todo" && (
-                          <span className="chip accent dot pulse">сейчас</span>
+                          <span className="chip accent pulse">
+                            <I.current size={12} /> сейчас
+                          </span>
                         )}
                       </div>
                       <div className="muted small" style={{ marginBottom: 10 }}>{t.description}</div>

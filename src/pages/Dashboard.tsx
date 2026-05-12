@@ -175,7 +175,7 @@ export default function Dashboard() {
             {quests.map((q) => (
               <div key={q.id} className="quest">
                 <div className={"qbox" + (q.done ? " done" : "")}>
-                  {q.done ? <I.check size={18} /> : <I.target size={16} />}
+                  {q.done ? <I.done size={18} /> : <I.target size={16} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="row between" style={{ marginBottom: 6 }}>
