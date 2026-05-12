@@ -48,6 +48,16 @@ async function hydrate() {
   for (const row of data as Array<{ topic_id: string; status: TopicStatus }>) {
     remote[row.topic_id] = row.status;
   }
+
+  const now = new Date().toISOString();
+  const localOnly = Object.entries(cache)
+    .filter(([id]) => !(id in remote))
+    .map(([topic_id, status]) => ({ topic_id, status, updated_at: now }));
+  if (localOnly.length > 0) {
+    const { error: upErr } = await supabase.from(TABLE).upsert(localOnly);
+    if (upErr) console.error("[supabase] hydrate upsert failed:", upErr);
+  }
+
   cache = { ...cache, ...remote };
   writeLocal(cache);
   emit();
