@@ -141,29 +141,41 @@ const PROJECT: Project = {
 
 export default function Playground() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mountedOnceRef = useRef(false);
 
   useEffect(() => {
-    const host = containerRef.current;
-    if (!host || mountedOnceRef.current) return;
-    mountedOnceRef.current = true;
+    const content = document.querySelector("main.content");
+    content?.classList.add("playground-fullscreen");
+    return () => {
+      content?.classList.remove("playground-fullscreen");
+    };
+  }, []);
+
+  useEffect(() => {
+    const wrapper = containerRef.current;
+    if (!wrapper) return;
+
+    // The SDK replaces the host element with an iframe. If we pass the
+    // React-owned ref'd div directly, StrictMode's double-invoke + reconciliation
+    // can orphan the iframe. Use an inner DOM-only div and clean it up ourselves.
+    const inner = document.createElement("div");
+    inner.style.width = "100%";
+    inner.style.height = "100%";
+    wrapper.appendChild(inner);
 
     let cancelled = false;
     sdk
-      .embedProject(host, PROJECT, {
+      .embedProject(inner, PROJECT, {
         height: "100%",
         width: "100%",
         view: "default",
         openFile: "src/App.tsx",
         theme: "dark",
         terminalHeight: 30,
-        hideExplorer: false,
-        hideNavigation: false,
         showSidebar: true,
       })
       .then(() => {
         if (cancelled) return;
-        const iframe = host.querySelector("iframe");
+        const iframe = wrapper.querySelector("iframe");
         if (iframe) {
           iframe.style.width = "100%";
           iframe.style.height = "100%";
@@ -177,6 +189,7 @@ export default function Playground() {
 
     return () => {
       cancelled = true;
+      while (wrapper.firstChild) wrapper.removeChild(wrapper.firstChild);
     };
   }, []);
 
@@ -185,53 +198,33 @@ export default function Playground() {
   };
 
   return (
-    <div className="col" style={{ gap: 18 }}>
+    <div className="playground-shell">
       <div className="row between" style={{ flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div className="row" style={{ gap: 8, marginBottom: 6 }}>
-            <span className="chip success">Песочница</span>
-            <span className="chip info"><I.code size={11} /> React + TS + Vite</span>
-            <span className="chip warning"><I.bolt size={11} /> WebContainers</span>
-          </div>
-          <h1 className="serif" style={{ fontSize: 26 }}>Полноценная среда</h1>
-          <div className="small muted" style={{ maxWidth: 620, marginTop: 4 }}>
-            VS Code-подобный редактор прямо в браузере: автодополнение, подсветка,
-            форматирование, реальный <code>npm install</code> и dev-сервер.
-          </div>
+        <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+          <span className="chip success">Песочница</span>
+          <span className="chip info"><I.code size={11} /> React + TS + Vite</span>
+          <span className="chip warning"><I.bolt size={11} /> WebContainers</span>
+          <span className="small muted" style={{ marginLeft: 4 }}>
+            Полная среда с автодополнением. Первый запуск ~10–20с.
+          </span>
         </div>
         <div className="row" style={{ gap: 8 }}>
+          <a
+            href="https://stackblitz.com"
+            target="_blank"
+            rel="noreferrer"
+            className="small muted"
+            style={{ textDecoration: "underline" }}
+          >
+            Powered by StackBlitz
+          </a>
           <button className="btn btn-ghost" onClick={openInTab}>
-            <I.arrow size={14} /> Открыть в новой вкладке
+            <I.arrow size={14} /> В новой вкладке
           </button>
         </div>
       </div>
 
-      <div
-        ref={containerRef}
-        style={{
-          height: "calc(100vh - 200px)",
-          minHeight: 540,
-          border: "1px solid var(--border)",
-          borderRadius: 16,
-          overflow: "hidden",
-          background: "#1e1d1a",
-        }}
-      />
-
-      <div className="row between" style={{ flexWrap: "wrap", gap: 8 }}>
-        <div className="small muted">
-          Первый запуск может занять 10–20 секунд — StackBlitz поднимает Node-окружение в браузере.
-        </div>
-        <a
-          href="https://stackblitz.com"
-          target="_blank"
-          rel="noreferrer"
-          className="small muted"
-          style={{ textDecoration: "underline" }}
-        >
-          Powered by StackBlitz
-        </a>
-      </div>
+      <div ref={containerRef} className="playground-embed" />
     </div>
   );
 }

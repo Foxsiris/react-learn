@@ -456,6 +456,37 @@ h3 { font-size: 17px; }
 .between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .sep { height: 1px; background: var(--border); margin: 16px 0; }
 
+/* Full-bleed layout for the Playground route — topbar is 64px sticky. */
+.content.playground-fullscreen {
+  padding: 16px;
+  max-width: none;
+  height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.playground-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.playground-embed {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #1e1d1a;
+}
+.playground-embed iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  display: block;
+}
+
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
   .sidebar { display: none; }
