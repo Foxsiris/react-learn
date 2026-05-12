@@ -3,15 +3,15 @@ import { useMemo } from "react";
 import { allTopics, findBlockOf, findTopic, type TopicStatus } from "../data/topics";
 import TheoryRenderer from "../components/TheoryRenderer";
 import LiveExample from "../components/LiveExample";
-import { I } from "../components/Icons";
+import { I, type IconKey } from "../components/Icons";
 import { setStatus, useTopicStatus } from "../hooks/useProgress";
 import { useToast } from "../components/ToastContext";
 
-const STATUS_ORDER: Array<{ key: TopicStatus; emoji: string; label: string; toastMsg: string }> = [
-  { key: "done",   emoji: "✅", label: "Изучено",      toastMsg: "Молодец! +50 XP" },
-  { key: "review", emoji: "🔁", label: "Повторить",    toastMsg: "Отметили на повторение" },
-  { key: "skip",   emoji: "⏸️", label: "Пока не нужно", toastMsg: "Пропустили" },
-  { key: "todo",   emoji: "⬜", label: "Не начато",     toastMsg: "Сброшено" },
+const STATUS_ORDER: Array<{ key: TopicStatus; icon: IconKey; label: string; toastMsg: string }> = [
+  { key: "done",   icon: "done",  label: "Изучено",      toastMsg: "Молодец! +50 XP" },
+  { key: "review", icon: "pause", label: "Повторить",    toastMsg: "Отметили на повторение" },
+  { key: "skip",   icon: "skip",  label: "Пока не нужно", toastMsg: "Пропустили" },
+  { key: "todo",   icon: "todo",  label: "Не начато",     toastMsg: "Сброшено" },
 ];
 
 export default function TopicPage() {
@@ -92,26 +92,36 @@ export default function TopicPage() {
             <div className="row" style={{ gap: 4 }}>
               {STATUS_ORDER.map((s) => {
                 const active = status === s.key;
+                const Ico = I[s.icon];
+                const activeColor =
+                  s.key === "done"   ? "var(--success)" :
+                  s.key === "review" ? "#8c6a1f" :
+                  s.key === "skip"   ? "var(--muted)" :
+                                       "var(--accent)";
                 return (
                   <button
                     key={s.key}
                     type="button"
                     title={s.label}
+                    aria-label={s.label}
+                    aria-pressed={active}
                     onClick={() => {
                       setStatus(id, s.key);
                       fireToast(s.toastMsg);
                     }}
                     style={{
-                      border: "1px solid " + (active ? "var(--accent)" : "var(--border)"),
+                      border: "1px solid " + (active ? activeColor : "var(--border)"),
                       background: active ? "var(--accent-tint)" : "var(--surface)",
+                      color: active ? activeColor : "var(--muted)",
                       borderRadius: 8,
-                      padding: "4px 8px",
-                      fontSize: 16,
+                      padding: "6px 8px",
+                      display: "grid",
+                      placeItems: "center",
                       cursor: "pointer",
                       transition: "all 140ms",
                     }}
                   >
-                    {s.emoji}
+                    <Ico size={16} />
                   </button>
                 );
               })}
@@ -185,7 +195,7 @@ export default function TopicPage() {
             </Link>
             {status !== "done" ? (
               <button className="btn btn-primary" onClick={markDone}>
-                <I.check size={14} /> Отметить пройденной
+                <I.done size={14} /> Отметить пройденной
               </button>
             ) : neighbors.next ? (
               <Link to={`/topic/${neighbors.next.id}`} className="btn btn-primary">

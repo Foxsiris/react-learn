@@ -26,7 +26,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {toast && (
         <div className="toast" key={toast.key}>
-          <span className="ico"><I.check size={16} /></span>
+          <span className="ico"><I.done size={16} /></span>
           {toast.msg}
         </div>
       )}
