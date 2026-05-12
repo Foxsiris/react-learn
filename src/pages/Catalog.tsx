@@ -119,59 +119,61 @@ export default function Catalog() {
           </div>
 
           <div className="road">
-            <div className="road-line" />
-            {filteredTopics.map((t, idx) => {
-              const status = progress[t.id] ?? "todo";
-              const isCurrent = current?.id === t.id;
-              let nodeClass: "done" | "current" | "locked" | "" = "";
-              if (status === "done") nodeClass = "done";
-              else if (isCurrent || status === "review") nodeClass = "current";
-              const side = idx % 2 === 0 ? "left" : "right";
-              return (
-                <div key={t.id} className={`road-node ${side} ${nodeClass}`}>
-                  <Link to={`/topic/${t.id}`} className="road-card">
-                    <div className="row between" style={{ marginBottom: 6 }}>
-                      <h3 style={{ fontSize: 15.5 }}>{t.title}</h3>
-                      {status === "done" && (
-                        <span className="chip success">
-                          <I.check size={11} /> Готово
+            <div className="road-track">
+              {filteredTopics.length > 0 && <div className="road-line" />}
+              {filteredTopics.map((t, idx) => {
+                const status = progress[t.id] ?? "todo";
+                const isCurrent = current?.id === t.id;
+                let nodeClass: "done" | "current" | "locked" | "" = "";
+                if (status === "done") nodeClass = "done";
+                else if (isCurrent || status === "review") nodeClass = "current";
+                const side = idx % 2 === 0 ? "left" : "right";
+                return (
+                  <div key={t.id} className={`road-node ${side} ${nodeClass}`}>
+                    <Link to={`/topic/${t.id}`} className="road-card">
+                      <div className="row between" style={{ marginBottom: 6 }}>
+                        <h3 style={{ fontSize: 15.5 }}>{t.title}</h3>
+                        {status === "done" && (
+                          <span className="chip success">
+                            <I.check size={11} /> Готово
+                          </span>
+                        )}
+                        {status === "review" && (
+                          <span className="chip warning">
+                            <I.refresh size={11} /> Повторить
+                          </span>
+                        )}
+                        {status === "skip" && (
+                          <span className="chip">пропущено</span>
+                        )}
+                        {isCurrent && status === "todo" && (
+                          <span className="chip accent dot pulse">сейчас</span>
+                        )}
+                      </div>
+                      <div className="muted small" style={{ marginBottom: 10 }}>{t.description}</div>
+                      <div className="row between small">
+                        <span className="muted">
+                          {t.examples.length > 0 ? `${t.examples.length} примера` : "теория"}
                         </span>
-                      )}
-                      {status === "review" && (
-                        <span className="chip warning">
-                          <I.refresh size={11} /> Повторить
-                        </span>
-                      )}
-                      {status === "skip" && (
-                        <span className="chip">пропущено</span>
-                      )}
-                      {isCurrent && status === "todo" && (
-                        <span className="chip accent dot pulse">сейчас</span>
-                      )}
+                        {isCurrent && (
+                          <span style={{ color: "var(--accent-deep)", fontWeight: 700 }}>
+                            +50 XP
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                    <div className="road-blob">
+                      {status === "done" ? <I.check size={20} /> : idx + 1}
                     </div>
-                    <div className="muted small" style={{ marginBottom: 10 }}>{t.description}</div>
-                    <div className="row between small">
-                      <span className="muted">
-                        {t.examples.length > 0 ? `${t.examples.length} примера` : "теория"}
-                      </span>
-                      {isCurrent && (
-                        <span style={{ color: "var(--accent-deep)", fontWeight: 700 }}>
-                          +50 XP за прохождение
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                  <div className="road-blob">
-                    {status === "done" ? <I.check size={20} /> : idx + 1}
                   </div>
+                );
+              })}
+              {filteredTopics.length === 0 && (
+                <div className="road-empty small">
+                  Ничего не найдено по «{search}»
                 </div>
-              );
-            })}
-            {filteredTopics.length === 0 && (
-              <div className="muted small" style={{ textAlign: "center", padding: 24 }}>
-                Ничего не найдено по «{search}»
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
