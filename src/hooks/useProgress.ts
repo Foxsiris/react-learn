@@ -2,25 +2,12 @@ import { useSyncExternalStore } from "react";
 import type { TopicStatus } from "../data/topics";
 import { supabase } from "../lib/supabase";
 
-const STORAGE_KEY = "react-learn:progress";
 const TABLE = "topic_progress";
+const LEGACY_STORAGE_KEY = "react-learn:progress";
 
 type ProgressMap = Record<string, TopicStatus>;
 
-function readLocal(): ProgressMap {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ProgressMap) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeLocal(map: ProgressMap) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-}
-
-let cache: ProgressMap = readLocal();
+let cache: ProgressMap = {};
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -36,6 +23,29 @@ function getSnapshot() {
   return cache;
 }
 
+async function migrateLegacy(remote: ProgressMap) {
+  try {
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!raw) return;
+    const legacy = JSON.parse(raw) as ProgressMap;
+    const now = new Date().toISOString();
+    const toUpload = Object.entries(legacy)
+      .filter(([id]) => !(id in remote))
+      .map(([topic_id, status]) => ({ topic_id, status, updated_at: now }));
+    if (toUpload.length > 0) {
+      const { error } = await supabase.from(TABLE).upsert(toUpload);
+      if (error) {
+        console.error("[supabase] legacy migration failed, will retry:", error);
+        return;
+      }
+      for (const row of toUpload) cache[row.topic_id] = row.status as TopicStatus;
+    }
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch {
+    // private mode / parse error — ignore
+  }
+}
+
 let hydrated = false;
 async function hydrate() {
   if (hydrated) return;
@@ -43,23 +53,16 @@ async function hydrate() {
   const { data, error } = await supabase
     .from(TABLE)
     .select("topic_id, status");
-  if (error || !data) return;
+  if (error || !data) {
+    console.error("[supabase] hydrate failed:", error);
+    return;
+  }
   const remote: ProgressMap = {};
   for (const row of data as Array<{ topic_id: string; status: TopicStatus }>) {
     remote[row.topic_id] = row.status;
   }
-
-  const now = new Date().toISOString();
-  const localOnly = Object.entries(cache)
-    .filter(([id]) => !(id in remote))
-    .map(([topic_id, status]) => ({ topic_id, status, updated_at: now }));
-  if (localOnly.length > 0) {
-    const { error: upErr } = await supabase.from(TABLE).upsert(localOnly);
-    if (upErr) console.error("[supabase] hydrate upsert failed:", upErr);
-  }
-
-  cache = { ...cache, ...remote };
-  writeLocal(cache);
+  cache = remote;
+  await migrateLegacy(remote);
   emit();
 }
 hydrate();
@@ -83,7 +86,6 @@ export function setStatus(topicId: string, status: TopicStatus | null) {
   } else {
     cache[topicId] = status;
   }
-  writeLocal(cache);
   emit();
   void syncRemote(topicId, status);
 }
