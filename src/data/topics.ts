@@ -1428,6 +1428,1197 @@ onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => ...}
       },
     ],
   },
+  {
+    id: "algorithms",
+    emoji: "📘",
+    title: "Грокаем алгоритмы",
+    description: "База алгоритмов и структур данных через призму фронтенда",
+    topics: [
+      {
+        id: "big-o",
+        title: "Big O — нотация сложности",
+        description: "Как читать O(1), O(n), O(n log n), O(n²)",
+        theory: r(`
+**Big O** — это **верхняя оценка скорости роста** числа операций при увеличении входа \`n\`. Не «сколько миллисекунд», а «как кривая ведёт себя на больших данных». Константы и младшие слагаемые отбрасываются: \`O(3n + 7)\` → \`O(n)\`.
+
+\`\`\`
+n = 10        n = 1000      n = 1_000_000
+O(1)          1             1             1
+O(log n)      ~3            ~10           ~20
+O(n)          10            1 000         1 000 000
+O(n log n)    ~30           ~10 000       ~20 000 000
+O(n²)         100           1 000 000     10¹²  💀
+O(2ⁿ)         1024          🔥            🔥
+\`\`\`
+
+**Шпаргалка по операциям JS:**
+
+| Операция | Сложность |
+|---|---|
+| \`arr[i]\`, \`arr.push/pop\` | O(1) |
+| \`arr.unshift/shift\` | **O(n)** — сдвигает все элементы |
+| \`arr.includes/indexOf\` | O(n) |
+| \`arr.sort()\` | O(n log n) |
+| \`set.has/add/delete\` | O(1) средний |
+| \`map.get/set/has\` | O(1) средний |
+| Spread \`[...arr]\` | O(n) |
+
+**Как считать сложность кода:**
+- Один цикл по \`n\` → \`O(n)\`
+- Вложенный цикл → \`O(n²)\`
+- Цикл с делением пополам → \`O(log n)\`
+- Рекурсия с двумя вызовами без мемо → \`O(2ⁿ)\`
+
+**Подводные камни:**
+- \`.includes\` внутри цикла превращает \`O(n)\` в \`O(n²)\` — лучше \`Set\`
+- \`shift/unshift\` — это \`O(n)\` под капотом
+- Spread в цикле — тоже \`O(n²)\`: \`result = [...result, x]\`
+
+**Память тоже считается.** \`arr.reverse()\` — O(n) время, O(1) память. \`[...arr].reverse()\` — O(n)/O(n).
+        `),
+        examples: [
+          {
+            title: "Сравниваем O(n²) и O(n) на практике",
+            code: r(`
+import { useState } from "react";
+
+// O(n²) — includes на каждой итерации
+function uniqueSlow(arr) {
+  const unique = [];
+  for (const x of arr) if (!unique.includes(x)) unique.push(x);
+  return unique;
+}
+
+// O(n) — Set
+function uniqueFast(arr) {
+  return [...new Set(arr)];
+}
+
+export default function App() {
+  const [n, setN] = useState(2000);
+  const [result, setResult] = useState(null);
+
+  const run = () => {
+    const arr = Array.from({ length: n }, () => Math.floor(Math.random() * (n / 2)));
+    const t1 = performance.now();
+    uniqueSlow(arr);
+    const slow = performance.now() - t1;
+    const t2 = performance.now();
+    uniqueFast(arr);
+    const fast = performance.now() - t2;
+    setResult({ slow: slow.toFixed(2), fast: fast.toFixed(2), ratio: (slow / fast).toFixed(1) });
+  };
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <label>n = </label>
+      <input type="number" value={n} onChange={e => setN(+e.target.value)} />
+      <button onClick={run} style={{ marginLeft: 8 }}>Замерить</button>
+      {result && (
+        <div style={{ marginTop: 12 }}>
+          <p>O(n²) includes: <b>{result.slow} ms</b></p>
+          <p>O(n) Set:      <b>{result.fast} ms</b></p>
+          <p>Разница: <b>×{result.ratio}</b></p>
+        </div>
+      )}
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "Two Sum: O(n²) vs O(n)",
+            code: r(`
+export default function App() {
+  // O(n²) — двойной цикл
+  function twoSumSlow(nums, target) {
+    for (let i = 0; i < nums.length; i++)
+      for (let j = i + 1; j < nums.length; j++)
+        if (nums[i] + nums[j] === target) return [i, j];
+    return null;
+  }
+
+  // O(n) — Map: для каждого x ищем target - x
+  function twoSumFast(nums, target) {
+    const seen = new Map();
+    for (let i = 0; i < nums.length; i++) {
+      const need = target - nums[i];
+      if (seen.has(need)) return [seen.get(need), i];
+      seen.set(nums[i], i);
+    }
+    return null;
+  }
+
+  const nums = [2, 7, 11, 15, 3, 6, 8];
+  const target = 17;
+
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <p>nums = [{nums.join(", ")}]</p>
+      <p>target = {target}</p>
+      <p>O(n²): {JSON.stringify(twoSumSlow(nums, target))}</p>
+      <p>O(n):  {JSON.stringify(twoSumFast(nums, target))}</p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "binary-search",
+        title: "Бинарный поиск",
+        description: "O(log n) — повсюду: от виртуализации до git bisect",
+        theory: r(`
+Если массив **отсортирован**, не нужно пробегать его целиком: каждый раз делим пополам и спрашиваем «искомое больше или меньше середины?». За один шаг отсекается ровно половина.
+
+Линейный поиск — до \`n\` сравнений. Бинарный — до \`log₂(n)\`. Для 1 000 000 элементов: **миллион vs 20**.
+
+\`\`\`js
+function binarySearch(sorted, target) {
+  let low = 0;
+  let high = sorted.length - 1;
+  while (low <= high) {
+    const mid = low + Math.floor((high - low) / 2);
+    if (sorted[mid] === target) return mid;
+    if (sorted[mid] < target) low = mid + 1;
+    else high = mid - 1;
+  }
+  return -1;
+}
+\`\`\`
+
+**Где это во фронте:**
+- **Виртуализация** (\`react-window\`, \`@tanstack/virtual\`) — найти, какой элемент сейчас сверху экрана по \`scrollTop\` среди известных \`offsets\`.
+- **Insertion point** в отсортированных коллекциях — \`lowerBound\` для вставки сообщения в чат без полной пересортировки.
+- **git bisect** — буквально бинарный поиск по истории коммитов.
+- **Autocomplete** по отсортированному списку.
+
+**Подводные камни:**
+- Массив **обязательно** отсортирован — иначе случайный результат.
+- Бесконечный цикл, если \`low = mid\` вместо \`mid + 1\`.
+- \`"10" < "2"\` — JS сравнивает строки лексикографически.
+
+**«Бинарный поиск по ответу»** — мощная техника: ищешь минимальную ширину колонки, при которой текст помещается без переноса в \`N\` строк, перебором по \`[1, maxWidth]\` с проверкой «помещается?».
+        `),
+        examples: [
+          {
+            title: "Интерактивный бинарный поиск",
+            code: r(`
+import { useState } from "react";
+
+const arr = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25];
+
+export default function App() {
+  const [target, setTarget] = useState(13);
+  const [steps, setSteps] = useState([]);
+
+  const run = () => {
+    const log = [];
+    let low = 0, high = arr.length - 1;
+    while (low <= high) {
+      const mid = low + ((high - low) >> 1);
+      log.push({ low, high, mid, value: arr[mid] });
+      if (arr[mid] === target) { log.push({ found: mid }); break; }
+      if (arr[mid] < target) low = mid + 1;
+      else high = mid - 1;
+    }
+    if (!log.some(s => s.found !== undefined)) log.push({ found: -1 });
+    setSteps(log);
+  };
+
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <p>arr = [{arr.join(", ")}]</p>
+      <label>target: </label>
+      <input type="number" value={target} onChange={e => setTarget(+e.target.value)} />
+      <button onClick={run} style={{ marginLeft: 8 }}>Найти</button>
+      <ol style={{ marginTop: 12 }}>
+        {steps.map((s, i) =>
+          s.found !== undefined
+            ? <li key={i}><b>{s.found >= 0 ? "Найдено на индексе " + s.found : "Не найдено"}</b></li>
+            : <li key={i}>low={s.low}, high={s.high}, mid={s.mid} → arr[mid]={s.value}</li>
+        )}
+      </ol>
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "lowerBound — куда вставить, чтобы сохранить порядок",
+            code: r(`
+import { useState } from "react";
+
+function lowerBound(arr, target) {
+  let lo = 0, hi = arr.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (arr[mid] < target) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+export default function App() {
+  const [items, setItems] = useState([10, 20, 30, 40, 50]);
+  const [val, setVal] = useState(25);
+
+  const insert = () => {
+    const idx = lowerBound(items, val);
+    const next = [...items];
+    next.splice(idx, 0, val);
+    setItems(next);
+  };
+
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <p>Массив: [{items.join(", ")}]</p>
+      <input type="number" value={val} onChange={e => setVal(+e.target.value)} />
+      <button onClick={insert} style={{ marginLeft: 8 }}>Вставить</button>
+      <p>Позиция вставки {val}: <b>{lowerBound(items, val)}</b></p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "arrays-vs-lists",
+        title: "Массивы vs Связные списки",
+        description: "Кеш-локальность, LRU, React Fiber",
+        theory: r(`
+**Массив** — непрерывная область памяти. Адрес элемента вычисляется арифметикой → **доступ по индексу O(1)**. Вставка в начало — O(n) (сдвиг всех элементов).
+
+**Связный список** — каждый узел хранит значение и указатель на следующий. Доступ по индексу — O(n). Вставка/удаление при наличии указателя на узел — **O(1)**.
+
+| Операция | Массив | Связный список |
+|---|---|---|
+| Чтение по индексу | **O(1)** | O(n) |
+| Вставка в начало | **O(n)** | **O(1)** |
+| Вставка в середину | O(n) | O(1) с указателем |
+| Удаление | O(n) | O(1) с указателем |
+| Кеш-локальность | ✅ | ❌ |
+
+**Где это во фронте:**
+- **React Fiber** — связный список с указателями \`child\`, \`sibling\`, \`return\`. Reconciler обходит fiber-узлы итеративно, чтобы можно было прерываться (Concurrent Mode).
+- **LRU-кеш** — двусвязный список + Map. Используется в \`swr\`, \`react-query\` для удаления старых записей.
+- **Очередь эффектов** в React — тоже список.
+
+**Подводные камни:**
+- \`Array.prototype.shift\` — O(n) (сдвигает все индексы). Очередь на \`shift\` тормозит.
+- У связного списка плохая кеш-локальность — на маленьких \`n\` массив почти всегда быстрее.
+- Дырки в массиве (\`arr[10000] = x\`) → V8 переключается на hash-режим, доступ замедляется.
+
+**LRU за O(1)** = двусвязный список + Map. Map даёт O(1) поиск узла, список даёт O(1) перемещение в начало и удаление с конца. Классический вопрос на мидл-собесе.
+        `),
+        examples: [
+          {
+            title: "LRU-кеш на двусвязном списке",
+            code: r(`
+import { useState } from "react";
+
+class DNode {
+  constructor(key, value) {
+    this.key = key; this.value = value;
+    this.prev = null; this.next = null;
+  }
+}
+
+class LRU {
+  constructor(capacity) {
+    this.cap = capacity;
+    this.map = new Map();
+    this.head = new DNode();
+    this.tail = new DNode();
+    this.head.next = this.tail;
+    this.tail.prev = this.head;
+  }
+  _remove(n) { n.prev.next = n.next; n.next.prev = n.prev; }
+  _addFront(n) {
+    n.next = this.head.next; n.prev = this.head;
+    this.head.next.prev = n; this.head.next = n;
+  }
+  get(key) {
+    if (!this.map.has(key)) return null;
+    const n = this.map.get(key);
+    this._remove(n); this._addFront(n);
+    return n.value;
+  }
+  set(key, value) {
+    if (this.map.has(key)) {
+      const n = this.map.get(key);
+      n.value = value;
+      this._remove(n); this._addFront(n);
+      return;
+    }
+    if (this.map.size === this.cap) {
+      const lru = this.tail.prev;
+      this._remove(lru); this.map.delete(lru.key);
+    }
+    const n = new DNode(key, value);
+    this._addFront(n); this.map.set(key, n);
+  }
+  toArray() {
+    const out = []; let cur = this.head.next;
+    while (cur !== this.tail) { out.push([cur.key, cur.value]); cur = cur.next; }
+    return out;
+  }
+}
+
+const lru = new LRU(3);
+
+export default function App() {
+  const [, setTick] = useState(0);
+
+  const action = (fn) => { fn(); setTick(t => t + 1); };
+
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <p>LRU capacity = 3</p>
+      <button onClick={() => action(() => lru.set("A", 1))}>set A=1</button>
+      <button onClick={() => action(() => lru.set("B", 2))}>set B=2</button>
+      <button onClick={() => action(() => lru.set("C", 3))}>set C=3</button>
+      <button onClick={() => action(() => lru.set("D", 4))}>set D=4 (выкинет хвост)</button>
+      <button onClick={() => action(() => lru.get("A"))}>get A (в начало)</button>
+      <p>Состояние (от свежего к старому):</p>
+      <pre>{JSON.stringify(lru.toArray(), null, 2)}</pre>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "recursion",
+        title: "Рекурсия",
+        description: "База, шаг, стек вызовов, рекурсивные компоненты",
+        theory: r(`
+Любая рекурсивная функция = **база** (условие выхода) + **рекурсивный шаг** (вызов себя с меньшим аргументом). Без базы — \`Maximum call stack size exceeded\`.
+
+Каждый вызов кладёт «фрейм» на стек. JS-движок держит ~10 000–20 000 фреймов. Глубокая рекурсия по большим данным → \`RangeError\`.
+
+**Когда рекурсия — естественное решение:** данные сами рекурсивны — деревья, JSON, AST, DOM, файловая система.
+
+**Рекурсивный компонент** во фронте — это меню с подменю, дерево комментариев, файловое дерево:
+
+\`\`\`jsx
+function MenuItem({ item }) {
+  return (
+    <li>
+      {item.label}
+      {item.children?.length > 0 && (
+        <ul>
+          {item.children.map(c => <MenuItem key={c.id} item={c} />)}
+        </ul>
+      )}
+    </li>
+  );
+}
+\`\`\`
+
+**Divide & Conquer** — рекурсивная стратегия: раздели → реши → объедини. Так устроены Quicksort, Mergesort, бинарный поиск, и React diff поддеревьев.
+
+**Подводные камни:**
+- Забыл базу или база не достигается → переполнение стека.
+- Лишние пересчёты: \`fib(n)\` без мемо — O(2ⁿ).
+- Мутация общих структур внутри рекурсии — соседи увидят изменения.
+
+**React Fiber отказался от рекурсии.** В React 16 reconciler переписан с рекурсии на итеративный обход линкед-листа fiber-узлов. Цель — возможность прерывать работу (Concurrent Mode).
+        `),
+        examples: [
+          {
+            title: "Рекурсивный компонент: дерево комментариев",
+            code: r(`
+const thread = {
+  id: 1, author: "Аня", text: "Тема обсуждения", likes: 3,
+  replies: [
+    { id: 2, author: "Боб", text: "Согласен", likes: 1, replies: [
+      { id: 4, author: "Аня", text: "Спасибо", likes: 5, replies: [] },
+    ]},
+    { id: 3, author: "Чарли", text: "А я нет", likes: 0, replies: [] },
+  ],
+};
+
+function Comment({ node, depth = 0 }) {
+  return (
+    <div style={{ marginLeft: depth * 24, padding: 8, borderLeft: "2px solid #444" }}>
+      <b>{node.author}</b> · ❤ {node.likes}
+      <div>{node.text}</div>
+      {node.replies.map(child => (
+        <Comment key={child.id} node={child} depth={depth + 1} />
+      ))}
+    </div>
+  );
+}
+
+function totalLikes(node) {
+  let sum = node.likes;
+  for (const c of node.replies) sum += totalLikes(c);
+  return sum;
+}
+
+export default function App() {
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <h3>Всего лайков: {totalLikes(thread)}</h3>
+      <Comment node={thread} />
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "deepFlatten: рекурсия vs итерация через стек",
+            code: r(`
+import { useState } from "react";
+
+function deepFlatten(arr) {
+  const out = [];
+  for (const x of arr) {
+    if (Array.isArray(x)) out.push(...deepFlatten(x));
+    else out.push(x);
+  }
+  return out;
+}
+
+function deepFlattenIter(arr) {
+  const out = [];
+  const stack = [arr];
+  while (stack.length) {
+    const top = stack.pop();
+    for (const x of top) {
+      if (Array.isArray(x)) stack.push(x);
+      else out.unshift(x);
+    }
+  }
+  return out;
+}
+
+export default function App() {
+  const input = [1, [2, [3, [4, [5, [6]]]]], 7];
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <p>Вход: {JSON.stringify(input)}</p>
+      <p>Рекурсия: {JSON.stringify(deepFlatten(input))}</p>
+      <p>Стек: {JSON.stringify(deepFlattenIter(input))}</p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "quicksort",
+        title: "Быстрая сортировка",
+        description: "Divide & conquer, Quickselect, что под капотом sort()",
+        theory: r(`
+**Quicksort** = классика divide & conquer:
+1. Выбираем **опорный элемент (pivot)**.
+2. Делим массив на части: \`< pivot\`, \`= pivot\`, \`> pivot\`.
+3. Рекурсивно сортируем обе.
+4. Склеиваем.
+
+| | Время | Память |
+|---|---|---|
+| Лучший / Средний | **O(n log n)** | O(log n) |
+| Худший (плохой pivot) | O(n²) | O(n) |
+
+**Худший случай** — когда pivot всё время минимум/максимум (отсортированный массив + pivot = первый элемент). Лечится случайным выбором или «медианой трёх».
+
+**Где это во фронте:**
+- Прямо — почти нигде, есть \`Array.prototype.sort\`.
+- **V8 использует Timsort** (merge + insertion), не quicksort.
+- **Quickselect** — найти k-й по величине за среднее O(n). «Топ-3 пользователя по активности» без полной сортировки.
+- Идея divide & conquer применима к React reconciliation.
+
+**Сравнение базовых сортировок:**
+
+| Алгоритм | Среднее | Худшее | Память | Стабильна? |
+|---|---|---|---|---|
+| Quicksort | O(n log n) | O(n²) | O(log n) | ❌ |
+| Mergesort | O(n log n) | O(n log n) | O(n) | ✅ |
+| \`Array.sort\` (Timsort) | O(n log n) | O(n log n) | O(n) | ✅ |
+
+**Подводные камни sort():**
+- \`[10, 2, 1].sort()\` → \`[1, 10, 2]\` — лексикографически! Нужен компаратор \`(a, b) => a - b\`.
+- \`sort\` мутирует массив (\`toSorted\` в ES2023 — копирующий).
+- \`(a, b) => a > b\` неверно — нужно число (-1/0/1).
+        `),
+        examples: [
+          {
+            title: "Quicksort с тремя массивами (для собеса)",
+            code: r(`
+import { useState } from "react";
+
+function quicksort(arr) {
+  if (arr.length <= 1) return arr;
+  const pivot = arr[arr.length >> 1];
+  const left = [], right = [], equal = [];
+  for (const x of arr) {
+    if (x < pivot) left.push(x);
+    else if (x > pivot) right.push(x);
+    else equal.push(x);
+  }
+  return [...quicksort(left), ...equal, ...quicksort(right)];
+}
+
+export default function App() {
+  const [arr, setArr] = useState([5, 2, 9, 1, 5, 6, 3, 8, 7, 4, 5]);
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <p>Вход:  [{arr.join(", ")}]</p>
+      <p>Выход: [{quicksort(arr).join(", ")}]</p>
+      <button onClick={() => setArr(Array.from({ length: 10 }, () => Math.floor(Math.random() * 100)))}>
+        Случайные
+      </button>
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "Quickselect: k-й по величине за O(n)",
+            code: r(`
+function partition(arr, lo, hi) {
+  const pivot = arr[hi];
+  let i = lo;
+  for (let j = lo; j < hi; j++) {
+    if (arr[j] < pivot) { [arr[i], arr[j]] = [arr[j], arr[i]]; i++; }
+  }
+  [arr[i], arr[hi]] = [arr[hi], arr[i]];
+  return i;
+}
+
+function quickselect(arr, k, lo = 0, hi = arr.length - 1) {
+  if (lo === hi) return arr[lo];
+  const p = partition(arr, lo, hi);
+  if (k === p) return arr[p];
+  return k < p ? quickselect(arr, k, lo, p - 1) : quickselect(arr, k, p + 1, hi);
+}
+
+export default function App() {
+  const nums = [7, 2, 9, 1, 5, 6, 3, 8, 4];
+  const sorted = [...nums].sort((a, b) => a - b);
+
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <p>Массив: [{nums.join(", ")}]</p>
+      <p>Отсортированный: [{sorted.join(", ")}]</p>
+      <p>3-й по величине (k=2): <b>{quickselect([...nums], 2)}</b></p>
+      <p>Медиана (k=4): <b>{quickselect([...nums], 4)}</b></p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "hash-tables",
+        title: "Хеш-таблицы",
+        description: "Map, Set, кеш запросов, дедупликация, индексация",
+        theory: r(`
+Хеш-функция превращает ключ в число — индекс в массиве «корзин». Среднее время поиска — **O(1)**.
+
+Иногда два разных ключа дают один индекс — **коллизия**. Когда коллизий много, таблица перехешируется: новый массив вдвое больше, всё переносится. Это O(n) единоразово, но амортизированно остаётся O(1).
+
+**Map vs Set vs Object:**
+
+| | Map | Set | Object |
+|---|---|---|---|
+| Ключи | любые | значения = ключи | строки/символы |
+| Порядок | вставки | вставки | с оговорками |
+| Размер | \`.size\` (O(1)) | \`.size\` (O(1)) | \`Object.keys(o).length\` (O(n)) |
+| Сериализация в JSON | ❌ | ❌ | ✅ |
+
+**Правило:** для логики/сторов — \`Map\`. Для DTO/JSON — \`Object\`.
+
+**Где это во фронте:**
+- **Кеш запросов** в \`react-query\`, \`swr\` — большая хеш-таблица: \`key → data\`.
+- **Дедупликация:** \`[...new Set(arr)]\`.
+- **Группировка / индексация** — заменяет \`O(n²) filter\` на \`O(n)\`.
+- **Подсчёт частот** — \`Map<char, count>\`.
+- **WeakMap** для «приватных» данных, привязанных к DOM-узлу.
+
+**Подводные камни:**
+- Объект как ключ работает по ссылке: \`m.set({id: 1}, "a"); m.get({id: 1})\` → \`undefined\`.
+- \`Object\` ломается на ключах \`__proto__\`, \`constructor\`, \`hasOwnProperty\` — используй \`Map\` или \`Object.create(null)\`.
+- \`JSON.stringify\` нестабилен по порядку ключей — для ключа кеша нормализуй.
+        `),
+        examples: [
+          {
+            title: "Замена O(n²) на O(n) индексом",
+            code: r(`
+const users = [
+  { id: 1, name: "Аня" }, { id: 2, name: "Боб" }, { id: 3, name: "Чарли" },
+];
+const purchases = [
+  { userId: 1, item: "Кофе" }, { userId: 2, item: "Чай" },
+  { userId: 1, item: "Печенье" }, { userId: 3, item: "Вода" },
+];
+
+// O(n*m) — для каждого user ищем линейно
+function slowJoin() {
+  return users.map(u => ({
+    ...u,
+    purchases: purchases.filter(p => p.userId === u.id),
+  }));
+}
+
+// O(n+m) — индексируем один раз
+function fastJoin() {
+  const byUser = new Map();
+  for (const p of purchases) {
+    if (!byUser.has(p.userId)) byUser.set(p.userId, []);
+    byUser.get(p.userId).push(p);
+  }
+  return users.map(u => ({ ...u, purchases: byUser.get(u.id) ?? [] }));
+}
+
+export default function App() {
+  return (
+    <div style={{ padding: 20 }}>
+      <h4>Через Map (O(n+m)):</h4>
+      <pre>{JSON.stringify(fastJoin(), null, 2)}</pre>
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "Подсчёт частот символов",
+            code: r(`
+import { useState } from "react";
+
+export default function App() {
+  const [text, setText] = useState("привет мир привет react");
+  const freq = new Map();
+  for (const ch of text) freq.set(ch, (freq.get(ch) ?? 0) + 1);
+  const top = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  return (
+    <div style={{ padding: 20 }}>
+      <input value={text} onChange={e => setText(e.target.value)} style={{ width: "100%" }} />
+      <p>Топ символов:</p>
+      <ul>
+        {top.map(([ch, n]) => (
+          <li key={ch}><code>"{ch}"</code> → {n}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "bfs-dfs",
+        title: "BFS и DFS",
+        description: "Обход графов и деревьев: очередь vs стек",
+        theory: r(`
+**BFS** (поиск в ширину) обходит граф **по уровням**. Использует **очередь FIFO**. Гарантия: первый раз, когда видим вершину, мы пришли к ней по **кратчайшему пути** (в невзвешенном графе).
+
+**DFS** (поиск в глубину) идёт «вглубь до упора», потом откатывается. Использует **стек** (или рекурсию).
+
+**Разница в коде — одна строка:** \`queue.shift()\` (BFS) vs \`stack.pop()\` (DFS).
+
+| Задача | Алгоритм |
+|---|---|
+| Кратчайший путь (без весов) | **BFS** |
+| Топологическая сортировка | DFS (post-order) |
+| Все возможные пути | DFS с возвратом |
+| Уровни / расстояния | **BFS** |
+| Поиск компонент связности | оба |
+
+**Где это во фронте:**
+- **Обход DOM / VDOM** — DFS (\`walkDOM\`, JSON-stringify).
+- **AST в Babel/ESLint** — DFS (pre-order для enter, post-order для exit).
+- **React Fiber commit phase** — post-order DFS: \`useEffect\` дочернего срабатывает **раньше** родительского.
+- **Топологическая сортировка модулей** в Webpack — DFS.
+- **Поиск «связь 2-го уровня»** в соцграфе — BFS.
+- **Levels rendering** дерева комментариев — BFS.
+
+**Сложность:** O(V + E) время, O(V) память.
+
+**Подводные камни:**
+- Без \`visited\` Set DFS уходит в бесконечный цикл на циклическом графе.
+- \`Array.prototype.shift()\` — O(n)! На больших графах BFS тормозит. Лучше — настоящая очередь с двумя индексами.
+- Метить \`visited\` нужно **при добавлении в очередь**, а не при извлечении — иначе одну вершину положим много раз.
+- DFS не даёт кратчайший путь, найденный — любой.
+        `),
+        examples: [
+          {
+            title: "BFS: кратчайший путь в графе друзей",
+            code: r(`
+import { useState } from "react";
+
+const friends = new Map([
+  ["Аня",   ["Боб", "Дима"]],
+  ["Боб",   ["Аня", "Чарли"]],
+  ["Чарли", ["Боб", "Ева"]],
+  ["Дима",  ["Аня", "Ева"]],
+  ["Ева",   ["Чарли", "Дима", "Федя"]],
+  ["Федя",  ["Ева"]],
+]);
+
+function shortestPath(graph, start, target) {
+  const queue = [start];
+  const cameFrom = new Map([[start, null]]);
+  while (queue.length) {
+    const node = queue.shift();
+    if (node === target) {
+      const path = [];
+      for (let n = target; n !== null; n = cameFrom.get(n)) path.unshift(n);
+      return path;
+    }
+    for (const next of graph.get(node) ?? []) {
+      if (!cameFrom.has(next)) {
+        cameFrom.set(next, node);
+        queue.push(next);
+      }
+    }
+  }
+  return null;
+}
+
+export default function App() {
+  const [from, setFrom] = useState("Аня");
+  const [to, setTo] = useState("Федя");
+  const path = shortestPath(friends, from, to);
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <p>От: <input value={from} onChange={e => setFrom(e.target.value)} /></p>
+      <p>До: <input value={to} onChange={e => setTo(e.target.value)} /></p>
+      <p>Путь: <b>{path ? path.join(" → ") : "не найден"}</b></p>
+      <p>Степень: <b>{path ? path.length - 1 : "—"}</b></p>
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "DFS: топологическая сортировка",
+            code: r(`
+const deps = new Map([
+  ["App", ["Header", "Main"]],
+  ["Main", ["List", "Footer"]],
+  ["List", ["Item"]],
+  ["Item", []],
+  ["Header", ["Logo"]],
+  ["Logo", []],
+  ["Footer", []],
+]);
+
+function topoSort(graph) {
+  const visited = new Set();
+  const result = [];
+  function dfs(u) {
+    if (visited.has(u)) return;
+    visited.add(u);
+    for (const v of graph.get(u) ?? []) dfs(v);
+    result.push(u); // post-order
+  }
+  for (const u of graph.keys()) dfs(u);
+  return result.reverse();
+}
+
+export default function App() {
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <p>Граф зависимостей — порядок «кого собрать первым»:</p>
+      <ol>{topoSort(deps).map(x => <li key={x}>{x}</li>)}</ol>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "dynamic-programming",
+        title: "Динамическое программирование",
+        description: "Мемоизация, табулирование, и почему это React.memo",
+        theory: r(`
+**DP** — это **запоминание промежуточных результатов**, чтобы не считать одно и то же дважды. Применимо, когда задача:
+1. Разбивается на подзадачи (overlapping subproblems).
+2. Оптимум состоит из оптимумов подзадач (optimal substructure).
+
+**Два стиля:**
+- **Top-down (мемоизация):** рекурсивно, кешируем ответы.
+- **Bottom-up (табулирование):** итеративно, заполняем таблицу от меньшего к большему.
+
+**Фибоначчи:**
+- Наивно — O(2ⁿ).
+- С мемо — O(n) время / O(n) память.
+- Bottom-up с двумя переменными — O(n) / O(1).
+
+**Классические задачи:**
+- **LCS** (Longest Common Subsequence) — основа \`git diff\`.
+- **Edit distance** (Левенштейн) — «вы имели в виду…?», fuzzy-поиск.
+- **Coin change** — минимум монет (жадный не работает).
+- **LIS** — наивно O(n²), с patience sort + бинарный поиск — O(n log n). Используется в **Vue 3 patchKeyedChildren**.
+
+**DP во фронте:**
+- \`useMemo\`, \`useCallback\`, \`React.memo\`, \`reselect\` — это DP на уровне инструмента.
+- **Diff в reconciler** — без ключей это вариант edit distance O(n²), с ключами — O(n).
+- **Кеш высот строк** в виртуализованных таблицах.
+- **Вагнер–Фишер** для diff текста — базис \`react-diff-viewer\` и git.
+
+**Подводные камни:**
+- Мемо по объекту-ссылке: новый объект каждый рендер ломает мемо.
+- Таблица n×m может занять гигабайты — часто можно хранить только последнюю строку.
+- Top-down может переполнить стек — переписывай в bottom-up.
+- Жадный вместо DP даёт неверный ответ на Knapsack/Coin Change.
+        `),
+        examples: [
+          {
+            title: "Фибоначчи: три варианта",
+            code: r(`
+import { useState } from "react";
+
+let naiveCalls = 0;
+function fibNaive(n) {
+  naiveCalls++;
+  if (n < 2) return n;
+  return fibNaive(n - 1) + fibNaive(n - 2);
+}
+
+function fibMemo(n, memo = new Map()) {
+  if (n < 2) return n;
+  if (memo.has(n)) return memo.get(n);
+  const v = fibMemo(n - 1, memo) + fibMemo(n - 2, memo);
+  memo.set(n, v);
+  return v;
+}
+
+function fibTab(n) {
+  if (n < 2) return n;
+  let a = 0, b = 1;
+  for (let i = 2; i <= n; i++) [a, b] = [b, a + b];
+  return b;
+}
+
+export default function App() {
+  const [n, setN] = useState(20);
+  naiveCalls = 0;
+  const naive = fibNaive(n);
+  const memo = fibMemo(n);
+  const tab = fibTab(n);
+
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <label>n = </label>
+      <input type="number" value={n} onChange={e => setN(Math.min(35, +e.target.value))} />
+      <p>Наивно (O(2ⁿ)): fib({n}) = {naive}, вызовов: <b>{naiveCalls}</b></p>
+      <p>С мемо (O(n)):  fib({n}) = {memo}</p>
+      <p>Таблица (O(1) память): fib({n}) = {tab}</p>
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "Edit distance: «вы имели в виду…?»",
+            code: r(`
+import { useState } from "react";
+
+function editDistance(a, b) {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+  return dp[a.length][b.length];
+}
+
+const dict = ["react", "redux", "router", "recoil", "remix", "rxjs", "rust", "rest"];
+
+export default function App() {
+  const [q, setQ] = useState("recat");
+  const ranked = dict
+    .map(w => ({ w, d: editDistance(q.toLowerCase(), w) }))
+    .sort((a, b) => a.d - b.d);
+
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <input value={q} onChange={e => setQ(e.target.value)} placeholder="опечатка" />
+      <p>Похоже на:</p>
+      <ol>
+        {ranked.slice(0, 4).map(({ w, d }) => (
+          <li key={w}>{w} (расстояние {d})</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "greedy",
+        title: "Жадные алгоритмы",
+        description: "Интервалы, throttle, упаковка галереи",
+        theory: r(`
+**Жадный** = на каждом шаге берём **локально оптимальный** выбор и надеемся, что суммарно получится глобально оптимально.
+
+**Классические задачи:**
+
+**1. Activity selection.** Максимум непересекающихся интервалов. Стратегия — **сортировка по концу**, потом берём первый подходящий.
+
+**2. Покрытие множеств.** Жадный даёт ln(n)-приближение к NP-hard задаче.
+
+**3. Сдача монетами.** В системе 1/5/10/25 — жадный работает. В системе 1/3/4 для суммы 6: жадный → \`4+1+1\`, оптимум → \`3+3\`. **Жадный не всегда оптимален** — нужно доказывать.
+
+**Где это во фронте:**
+- **Throttle / rate-limiting** — token bucket жадно отправляет, как только токен доступен.
+- **Перенос строк** в \`<p>\` — greedy line breaking. (TeX использует DP для лучшего вида.)
+- **Justified gallery** (Flickr/Unsplash) — жадно набираем картинки в ряд.
+- **LRU** — жадно выкидываем самое неиспользуемое.
+- **React batching** — жадно набирает обновления в кадр.
+- **Дейкстра** — тоже жадный.
+
+**Сложность:** обычно O(n log n) — доминирует сортировка.
+
+**Подводные камни:**
+- Жадный ≠ всегда оптимальный. Перед написанием — проверь на каверзном входе.
+- Activity selection работает **только** с сортировкой по \`end\`, а не \`start\` или длительности.
+- 0/1 Knapsack по «удельной ценности» жадно не решается — нужна DP.
+
+**Хаффман-коды** (gzip, brotli) — оптимальное префиксное кодирование жадным алгоритмом: всегда сливаем два самых редких символа.
+        `),
+        examples: [
+          {
+            title: "Activity selection: максимум встреч",
+            code: r(`
+import { useState } from "react";
+
+function maxIntervals(intervals) {
+  const sorted = [...intervals].sort((a, b) => a.end - b.end);
+  const chosen = [];
+  let lastEnd = -Infinity;
+  for (const iv of sorted) {
+    if (iv.start >= lastEnd) {
+      chosen.push(iv);
+      lastEnd = iv.end;
+    }
+  }
+  return chosen;
+}
+
+const meetings = [
+  { id: "Standup",   start: 9,  end: 9.5 },
+  { id: "Дизайн",    start: 10, end: 12 },
+  { id: "Обед",      start: 12, end: 13 },
+  { id: "Митинг",    start: 11, end: 12.5 },
+  { id: "1-on-1",    start: 13, end: 14 },
+  { id: "Demo",      start: 13.5, end: 15 },
+  { id: "Ретро",     start: 15, end: 16 },
+];
+
+export default function App() {
+  const [view, setView] = useState("all");
+  const data = view === "all" ? meetings : maxIntervals(meetings);
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <button onClick={() => setView("all")}>Все ({meetings.length})</button>
+      <button onClick={() => setView("max")}>Max непересекающихся ({maxIntervals(meetings).length})</button>
+      <ul>
+        {data.map(m => <li key={m.id}>{m.id}: {m.start}–{m.end}</li>)}
+      </ul>
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "Throttle: жадная стратегия",
+            code: r(`
+import { useState, useRef } from "react";
+
+function throttle(fn, ms) {
+  let last = 0;
+  return (...args) => {
+    const now = Date.now();
+    if (now - last >= ms) { last = now; fn(...args); }
+  };
+}
+
+export default function App() {
+  const [count, setCount] = useState(0);
+  const [calls, setCalls] = useState(0);
+  const throttled = useRef(throttle(() => setCount(c => c + 1), 500)).current;
+
+  return (
+    <div style={{ padding: 20 }}>
+      <p>Throttle: 500мс — клики «жадно» проходят, как только окно открыто.</p>
+      <button onClick={() => { setCalls(c => c + 1); throttled(); }}>
+        Кликни много раз!
+      </button>
+      <p>Всего кликов: <b>{calls}</b></p>
+      <p>Прошло throttle: <b>{count}</b></p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "trees-heap-trie",
+        title: "Деревья: BST, Heap, Trie",
+        description: "BST для порядка, Heap для приоритетов, Trie для autocomplete",
+        theory: r(`
+Дерево — связный граф без циклов. В нём фронт сталкивается ежедневно: DOM, VDOM, AST, JSON, дерево комментариев.
+
+**1. BST (Binary Search Tree).** Для любого узла: левое поддерево < узел < правое. Операции — O(log n) в среднем, **O(n) в худшем** (вырожденное дерево-список). Гарантия — AVL/Red-Black.
+
+inorder-обход BST даёт **отсортированную последовательность**.
+
+**2. Heap (Min/Max).** Почти полное бинарное дерево, где корень — минимум/максимум. Реализуется массивом: для узла \`i\` дети — \`2i+1\`, \`2i+2\`.
+- \`push\` / \`pop\` — O(log n).
+- \`peek\` — O(1).
+- Построение из массива — O(n).
+
+**Где Heap во фронте:**
+- **React Scheduler** буквально использует min-heap по приоритетам задач. Файл \`react-reconciler/src/Scheduler.js\`. Это основа «прерываемой работы» в Concurrent React.
+- **Алгоритм Дейкстры** — min-heap для следующей ближайшей вершины.
+- **Top-K**: «10 самых популярных» через min-heap размера K.
+
+**3. Trie (префиксное дерево).** Каждый узел — символ; путь от корня — префикс. Операции — O(L), где L — длина строки. **Не зависит от числа слов!**
+
+**Где Trie во фронте:**
+- **Autocomplete** для команд (VSCode, Slack \`/команды\`).
+- **URL-роутер** в React Router 6 / Vue Router строит trie-подобную структуру для O(L) матчинга.
+- **emoji-picker** — поиск по началу имени.
+
+**Подводные камни:**
+- Несбалансированный BST на отсортированных данных = связный список.
+- Heap — НЕ отсортированный массив. \`h[1]\` и \`h[2]\` могут идти в любом порядке.
+- Trie жрёт память: 100K слов = десятки МБ. Лекарство — radix tree.
+        `),
+        examples: [
+          {
+            title: "Trie: autocomplete по префиксу",
+            code: r(`
+import { useState } from "react";
+
+class Trie {
+  constructor() { this.root = Object.create(null); }
+  insert(word) {
+    let node = this.root;
+    for (const ch of word) {
+      if (!node[ch]) node[ch] = Object.create(null);
+      node = node[ch];
+    }
+    node.$ = true;
+  }
+  wordsWithPrefix(prefix) {
+    let node = this.root;
+    for (const ch of prefix) {
+      if (!node[ch]) return [];
+      node = node[ch];
+    }
+    const out = [];
+    const walk = (n, path) => {
+      if (n.$) out.push(path);
+      for (const ch in n) if (ch !== "$") walk(n[ch], path + ch);
+    };
+    walk(node, prefix);
+    return out;
+  }
+}
+
+const trie = new Trie();
+["react", "redux", "router", "recoil", "remix", "rxjs", "rust", "rest", "render", "ref"]
+  .forEach(w => trie.insert(w));
+
+export default function App() {
+  const [q, setQ] = useState("re");
+  const matches = q ? trie.wordsWithPrefix(q.toLowerCase()) : [];
+
+  return (
+    <div style={{ padding: 20 }}>
+      <input value={q} onChange={e => setQ(e.target.value)} placeholder="префикс..." />
+      <ul>{matches.map(w => <li key={w}>{w}</li>)}</ul>
+      {q && matches.length === 0 && <p>Нет совпадений</p>}
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "MinHeap и Top-K за O(n log K)",
+            code: r(`
+class MinHeap {
+  constructor() { this.h = []; }
+  push(v) {
+    this.h.push(v);
+    let i = this.h.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (this.h[p] <= this.h[i]) break;
+      [this.h[p], this.h[i]] = [this.h[i], this.h[p]];
+      i = p;
+    }
+  }
+  pop() {
+    if (!this.h.length) return undefined;
+    const top = this.h[0];
+    const last = this.h.pop();
+    if (this.h.length) {
+      this.h[0] = last;
+      let i = 0;
+      while (true) {
+        const l = 2*i+1, r = 2*i+2;
+        let s = i;
+        if (l < this.h.length && this.h[l] < this.h[s]) s = l;
+        if (r < this.h.length && this.h[r] < this.h[s]) s = r;
+        if (s === i) break;
+        [this.h[i], this.h[s]] = [this.h[s], this.h[i]];
+        i = s;
+      }
+    }
+    return top;
+  }
+  peek() { return this.h[0]; }
+  get size() { return this.h.length; }
+}
+
+// Top-K: храним K самых больших через min-heap размера K
+function topK(arr, k) {
+  const heap = new MinHeap();
+  for (const x of arr) {
+    if (heap.size < k) heap.push(x);
+    else if (x > heap.peek()) { heap.pop(); heap.push(x); }
+  }
+  return [...heap.h].sort((a, b) => b - a);
+}
+
+export default function App() {
+  const nums = Array.from({ length: 50 }, () => Math.floor(Math.random() * 1000));
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <p>50 случайных чисел:</p>
+      <p style={{ fontSize: 11 }}>[{nums.join(", ")}]</p>
+      <p>Top-5: <b>[{topK(nums, 5).join(", ")}]</b></p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 // Плоский список всех топиков (удобно для роутинга)
