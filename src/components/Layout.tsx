@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { I, type IconKey } from "./Icons";
 import { useProgress } from "../hooks/useProgress";
 import { useActivity } from "../hooks/useActivity";
+import { useCatalog } from "../hooks/useTopicsCatalog";
+import { useUserPreferences, type AccentColor } from "../hooks/useUserPreferences";
+import { useUserProfile } from "../hooks/useUserProfile";
 import { computeStats, findCurrentTopic, getRank } from "../lib/stats";
-import { USER_NAME } from "../lib/user";
 import { ToastProvider, useToast } from "./ToastContext";
 
 const NAV: Array<{ to: string; label: string; icon: IconKey; end?: boolean }> = [
@@ -16,34 +18,19 @@ const NAV: Array<{ to: string; label: string; icon: IconKey; end?: boolean }> = 
   { to: "/profile",      label: "Профиль",        icon: "user" },
 ];
 
-const ACCENTS: Record<string, { accent: string; deep: string; soft: string; tint: string }> = {
+const ACCENTS: Record<AccentColor, { accent: string; deep: string; soft: string; tint: string }> = {
   terracotta: { accent: "#e85a2b", deep: "#c4421b", soft: "#fbe7dc", tint: "#fef3ec" },
   indigo:     { accent: "#5b6cff", deep: "#3d4dd6", soft: "#dfe3ff", tint: "#eef0ff" },
   forest:     { accent: "#3f8a5e", deep: "#2d6c47", soft: "#d8ead9", tint: "#e9f3ea" },
   plum:       { accent: "#9b4faa", deep: "#763a85", soft: "#ecd7f0", tint: "#f6eaf8" },
 };
 
-const TWEAKS_KEY = "react-learn:tweaks";
-type Tweaks = { accent: keyof typeof ACCENTS; animations: boolean };
-const DEFAULT_TWEAKS: Tweaks = { accent: "terracotta", animations: true };
-
-function loadTweaks(): Tweaks {
-  try {
-    const raw = localStorage.getItem(TWEAKS_KEY);
-    if (!raw) return DEFAULT_TWEAKS;
-    return { ...DEFAULT_TWEAKS, ...(JSON.parse(raw) as Partial<Tweaks>) };
-  } catch {
-    return DEFAULT_TWEAKS;
-  }
-}
-
-function saveTweaks(t: Tweaks) {
-  localStorage.setItem(TWEAKS_KEY, JSON.stringify(t));
-}
-
 function Sidebar({ currentLessonId }: { currentLessonId: string | undefined }) {
   const progress = useProgress();
-  const stats = computeStats(progress);
+  const catalog = useCatalog();
+  const { profile } = useUserProfile();
+  const stats = computeStats(progress, catalog.topics.length);
+  const initial = (profile?.display_name?.[0] ?? "?").toUpperCase();
 
   return (
     <aside className="sidebar">
@@ -86,9 +73,9 @@ function Sidebar({ currentLessonId }: { currentLessonId: string | undefined }) {
           style={{ background: "var(--surface-2)", textDecoration: "none", color: "inherit", display: "block" }}
         >
           <div className="row" style={{ gap: 10 }}>
-            <div className="avatar" style={{ width: 40, height: 40 }}>{USER_NAME[0]}</div>
+            <div className="avatar" style={{ width: 40, height: 40 }}>{initial}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 13.5 }}>{USER_NAME}</div>
+              <div style={{ fontWeight: 700, fontSize: 13.5 }}>{profile?.display_name ?? "…"}</div>
               <div className="small muted" style={{ fontSize: 11 }}>{getRank(stats.level)}</div>
             </div>
             <span style={{ padding: 4, color: "var(--muted)" }}><I.chevR size={14} /></span>
@@ -109,11 +96,14 @@ function Sidebar({ currentLessonId }: { currentLessonId: string | undefined }) {
 function Topbar({ currentLessonId }: { currentLessonId: string | undefined }) {
   const progress = useProgress();
   const activity = useActivity();
-  const stats = computeStats(progress);
+  const catalog = useCatalog();
+  const { profile } = useUserProfile();
+  const stats = computeStats(progress, catalog.topics.length);
   const navigate = useNavigate();
   const { fireToast } = useToast();
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const initial = (profile?.display_name?.[0] ?? "?").toUpperCase();
 
   const results = NAV.filter((n) => n.label.toLowerCase().includes(query.toLowerCase()));
 
@@ -185,20 +175,15 @@ function Topbar({ currentLessonId }: { currentLessonId: string | undefined }) {
           <I.bell size={16} />
         </button>
         <NavLink to="/profile" className="avatar" style={{ textDecoration: "none" }}>
-          {USER_NAME[0]}
+          {initial}
         </NavLink>
       </div>
     </div>
   );
 }
 
-function TweaksPanel({
-  tweaks,
-  setTweak,
-}: {
-  tweaks: Tweaks;
-  setTweak: <K extends keyof Tweaks>(k: K, v: Tweaks[K]) => void;
-}) {
+function TweaksPanel() {
+  const { prefs, update } = useUserPreferences();
   const [open, setOpen] = useState(false);
   return (
     <div style={{ position: "fixed", right: 18, bottom: 18, zIndex: 100 }}>
@@ -212,16 +197,16 @@ function TweaksPanel({
           </div>
           <div className="nav-section-title" style={{ padding: "0 0 6px" }}>Акцент</div>
           <div className="row" style={{ gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-            {Object.entries(ACCENTS).map(([key, c]) => (
+            {(Object.entries(ACCENTS) as Array<[AccentColor, typeof ACCENTS[AccentColor]]>).map(([key, c]) => (
               <button
                 key={key}
-                onClick={() => setTweak("accent", key as keyof typeof ACCENTS)}
+                onClick={() => void update("accent_color", key)}
                 style={{
                   width: 30,
                   height: 30,
                   borderRadius: 8,
                   background: c.accent,
-                  border: tweaks.accent === key ? "2px solid var(--ink)" : "2px solid transparent",
+                  border: prefs.accent_color === key ? "2px solid var(--ink)" : "2px solid transparent",
                   cursor: "pointer",
                 }}
                 aria-label={key}
@@ -233,8 +218,8 @@ function TweaksPanel({
             <span style={{ fontSize: 13, fontWeight: 600 }}>Анимации</span>
             <input
               type="checkbox"
-              checked={tweaks.animations}
-              onChange={(e) => setTweak("animations", e.target.checked)}
+              checked={prefs.animations_enabled}
+              onChange={(e) => void update("animations_enabled", e.target.checked)}
             />
           </label>
         </div>
@@ -252,13 +237,14 @@ function TweaksPanel({
 
 function LayoutInner() {
   const progress = useProgress();
-  const current = findCurrentTopic(progress);
+  const catalog = useCatalog();
+  const current = findCurrentTopic(progress, catalog.topics);
+  const { prefs } = useUserPreferences();
   const location = useLocation();
   const navigate = useNavigate();
-  const [tweaks, setTweaks] = useState<Tweaks>(loadTweaks);
 
   useEffect(() => {
-    const a = ACCENTS[tweaks.accent] ?? ACCENTS.terracotta;
+    const a = ACCENTS[prefs.accent_color] ?? ACCENTS.terracotta;
     const root = document.documentElement;
     root.style.setProperty("--accent", a.accent);
     root.style.setProperty("--accent-deep", a.deep);
@@ -266,15 +252,11 @@ function LayoutInner() {
     root.style.setProperty("--accent-tint", a.tint);
     root.style.setProperty("--heart", a.accent);
     root.style.setProperty("--shadow-pop", `0 8px 28px ${a.accent}40`);
-  }, [tweaks.accent]);
+  }, [prefs.accent_color]);
 
   useEffect(() => {
-    document.documentElement.dataset.anim = tweaks.animations ? "on" : "off";
-  }, [tweaks.animations]);
-
-  useEffect(() => {
-    saveTweaks(tweaks);
-  }, [tweaks]);
+    document.documentElement.dataset.anim = prefs.animations_enabled ? "on" : "off";
+  }, [prefs.animations_enabled]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -295,10 +277,6 @@ function LayoutInner() {
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate, current?.id]);
 
-  const setTweak = <K extends keyof Tweaks>(k: K, v: Tweaks[K]) => {
-    setTweaks((prev) => ({ ...prev, [k]: v }));
-  };
-
   return (
     <div className="app">
       <Sidebar currentLessonId={current?.id} />
@@ -308,7 +286,7 @@ function LayoutInner() {
           <Outlet />
         </main>
       </div>
-      <TweaksPanel tweaks={tweaks} setTweak={setTweak} />
+      <TweaksPanel />
     </div>
   );
 }

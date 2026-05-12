@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { useUserId } from "../lib/auth";
+import { useProgress } from "./useProgress";
 
-const TABLE = "topic_progress";
+const TABLE = "user_progress";
 const WEEKS = 26;
 const DAYS = WEEKS * 7;
 
@@ -41,14 +43,18 @@ function levelFromCount(c: number): number {
 }
 
 export function useActivity(): Activity {
+  const userId = useUserId();
+  const progress = useProgress();
   const [state, setState] = useState<Activity>(empty);
 
   useEffect(() => {
+    if (!userId) return;
     let alive = true;
     (async () => {
       const { data, error } = await supabase
         .from(TABLE)
         .select("topic_id, status, updated_at")
+        .eq("user_id", userId)
         .order("updated_at", { ascending: false });
       if (!alive) return;
       if (error || !data) {
@@ -76,7 +82,7 @@ export function useActivity(): Activity {
       }
 
       let streak = 0;
-      let cursor = new Date(today);
+      const cursor = new Date(today);
       while (counts[localDateKey(cursor)] && counts[localDateKey(cursor)] > 0) {
         streak++;
         cursor.setDate(cursor.getDate() - 1);
@@ -84,7 +90,7 @@ export function useActivity(): Activity {
       if (streak === 0 && !counts[localDateKey(today)]) {
         const y = new Date(today);
         y.setDate(y.getDate() - 1);
-        let c2 = new Date(y);
+        const c2 = new Date(y);
         while (counts[localDateKey(c2)] && counts[localDateKey(c2)] > 0) {
           streak++;
           c2.setDate(c2.getDate() - 1);
@@ -123,7 +129,7 @@ export function useActivity(): Activity {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [userId, progress]);
 
   return state;
 }

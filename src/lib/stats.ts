@@ -1,5 +1,5 @@
 import type { TopicStatus } from "../data/topics";
-import { allTopics, blocks } from "../data/topics";
+import type { CatalogGroup, CatalogTopic } from "../hooks/useTopicsCatalog";
 
 const XP_PER_STATUS: Record<TopicStatus, number> = {
   done: 50,
@@ -27,7 +27,7 @@ export type Stats = {
   overallProgress: number;
 };
 
-export function computeStats(progress: ProgressMap): Stats {
+export function computeStats(progress: ProgressMap, totalTopics: number): Stats {
   let xp = 0;
   let doneCount = 0;
   let reviewCount = 0;
@@ -38,7 +38,6 @@ export function computeStats(progress: ProgressMap): Stats {
     else if (status === "review") reviewCount++;
     else if (status === "skip") skipCount++;
   }
-  const totalTopics = allTopics.length;
   const todoCount = totalTopics - doneCount - reviewCount - skipCount;
   const level = Math.floor(xp / XP_PER_LEVEL) + 1;
   const xpInLevel = xp % XP_PER_LEVEL;
@@ -71,14 +70,11 @@ export function getRank(level: number): string {
 
 export type LessonStateForUI = "done" | "current" | "todo" | "review" | "skip";
 
-export function findCurrentTopic(progress: ProgressMap) {
-  const review = allTopics.find((t) => progress[t.id] === "review");
+export function findCurrentTopic(progress: ProgressMap, topics: CatalogTopic[]): CatalogTopic | undefined {
+  const review = topics.find((t) => progress[t.id] === "review");
   if (review) return review;
-  const first = allTopics.find((t) => {
-    const s = progress[t.id] ?? "todo";
-    return s === "todo";
-  });
-  return first ?? allTopics[allTopics.length - 1];
+  const first = topics.find((t) => (progress[t.id] ?? "todo") === "todo");
+  return first ?? topics[topics.length - 1];
 }
 
 export type BlockStat = {
@@ -89,18 +85,18 @@ export type BlockStat = {
   progress: number;
 };
 
-export function computeBlockStats(progress: ProgressMap): BlockStat[] {
-  return blocks.map((b) => {
-    const total = b.topics.length;
+export function computeBlockStats(progress: ProgressMap, groups: CatalogGroup[]): BlockStat[] {
+  return groups.map((g) => {
+    const total = g.topics.length;
     let done = 0;
     let inProgress = 0;
-    for (const t of b.topics) {
+    for (const t of g.topics) {
       const s = progress[t.id] ?? "todo";
       if (s === "done") done++;
       else if (s === "review") inProgress++;
     }
     return {
-      blockId: b.id,
+      blockId: g.id,
       total,
       done,
       inProgress,
@@ -120,9 +116,9 @@ export type Achievement = {
   ribbon?: "NEW";
 };
 
-export function computeAchievements(progress: ProgressMap): Achievement[] {
-  const stats = computeStats(progress);
-  const blockStats = computeBlockStats(progress);
+export function computeAchievements(progress: ProgressMap, groups: CatalogGroup[], totalTopics: number): Achievement[] {
+  const stats = computeStats(progress, totalTopics);
+  const blockStats = computeBlockStats(progress, groups);
   const blocksFullyDone = blockStats.filter((b) => b.total > 0 && b.done === b.total).length;
   const blocksStarted = blockStats.filter((b) => b.done + b.inProgress > 0).length;
 

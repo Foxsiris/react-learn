@@ -1,6 +1,7 @@
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useMemo } from "react";
-import { allTopics, findBlockOf, findTopic, type TopicStatus } from "../data/topics";
+import { findTopic, type TopicStatus } from "../data/topics";
+import { useCatalog, findCatalogGroupOf } from "../hooks/useTopicsCatalog";
 import TheoryRenderer from "../components/TheoryRenderer";
 import LiveExample from "../components/LiveExample";
 import { I, type IconKey } from "../components/Icons";
@@ -16,25 +17,31 @@ const STATUS_ORDER: Array<{ key: TopicStatus; icon: IconKey; label: string; toas
 
 export default function TopicPage() {
   const { id } = useParams<{ id: string }>();
-  const topic = id ? findTopic(id) : undefined;
-  const block = id ? findBlockOf(id) : undefined;
+  const catalog = useCatalog();
+  const content = id ? findTopic(id) : undefined;
+  const meta = id ? catalog.topics.find((t) => t.id === id) : undefined;
+  const group = id ? findCatalogGroupOf(catalog, id) : undefined;
   const status = useTopicStatus(id ?? "");
   const navigate = useNavigate();
   const { fireToast } = useToast();
 
   const neighbors = useMemo(() => {
-    if (!id) return { prev: undefined, next: undefined };
-    const idx = allTopics.findIndex((t) => t.id === id);
+    if (!id || catalog.topics.length === 0) return { prev: undefined, next: undefined };
+    const ordered = catalog.topics;
+    const idx = ordered.findIndex((t) => t.id === id);
     return {
-      prev: idx > 0 ? allTopics[idx - 1] : undefined,
-      next: idx < allTopics.length - 1 ? allTopics[idx + 1] : undefined,
+      prev: idx > 0 ? ordered[idx - 1] : undefined,
+      next: idx >= 0 && idx < ordered.length - 1 ? ordered[idx + 1] : undefined,
     };
-  }, [id]);
+  }, [id, catalog.topics]);
 
-  if (!id || !topic) return <Navigate to="/catalog" replace />;
-  if (!block) return <Navigate to="/catalog" replace />;
+  if (!id) return <Navigate to="/catalog" replace />;
+  if (catalog.loading && !meta) {
+    return <div className="card"><div className="muted small">Загружаем тему…</div></div>;
+  }
+  if (!meta || !group) return <Navigate to="/catalog" replace />;
 
-  const topicIdx = block.topics.findIndex((t) => t.id === id);
+  const topicIdx = group.topics.findIndex((t) => t.id === id);
 
   const markDone = () => {
     setStatus(id, "done");
@@ -51,11 +58,11 @@ export default function TopicPage() {
           <I.arrowL size={14} /> К карте
         </Link>
         <div className="muted small" style={{ padding: "4px 8px" }}>
-          {block.emoji} {block.title}
+          {group.emoji} {group.title}
         </div>
         <h3 style={{ padding: "0 8px 12px", fontSize: 17 }}>Содержание</h3>
         <div className="col" style={{ gap: 2 }}>
-          {block.topics.map((t, i) => {
+          {group.topics.map((t, i) => {
             const isCurrent = t.id === id;
             return (
               <Link
@@ -85,7 +92,7 @@ export default function TopicPage() {
         <div className="card">
           <div className="row between" style={{ marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
             <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
-              <span className="chip accent">Тема {topicIdx + 1} из {block.topics.length}</span>
+              <span className="chip accent">Тема {topicIdx + 1} из {group.topics.length}</span>
               <span className="chip"><I.clock size={11} /> ~10 мин</span>
               <span className="chip warning"><I.bolt size={11} /> +50 XP</span>
             </div>
@@ -128,15 +135,15 @@ export default function TopicPage() {
             </div>
           </div>
 
-          <h1 className="serif" style={{ fontSize: 30, marginBottom: 10 }}>{topic.title}</h1>
+          <h1 className="serif" style={{ fontSize: 30, marginBottom: 10 }}>{meta.title}</h1>
           <p style={{ color: "var(--ink-2)", fontSize: 15.5, marginBottom: 16, maxWidth: 720 }}>
-            {topic.description}
+            {meta.description}
           </p>
 
-          <TheoryRenderer markdown={topic.theory} />
+          {content && <TheoryRenderer markdown={content.theory} />}
         </div>
 
-        {topic.examples.length > 0 && (
+        {content && content.examples.length > 0 && (
           <div className="card">
             <div className="between" style={{ marginBottom: 14 }}>
               <div className="row">
@@ -145,10 +152,10 @@ export default function TopicPage() {
                 </span>
                 <h3 style={{ fontSize: 16 }}>Интерактивные примеры</h3>
               </div>
-              <span className="small muted">{topic.examples.length} {topic.examples.length === 1 ? "пример" : "примера"}</span>
+              <span className="small muted">{content.examples.length} {content.examples.length === 1 ? "пример" : "примера"}</span>
             </div>
             <div className="col" style={{ gap: 18 }}>
-              {topic.examples.map((ex, i) => (
+              {content.examples.map((ex, i) => (
                 <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
                   <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{ex.title}</div>
@@ -161,14 +168,14 @@ export default function TopicPage() {
           </div>
         )}
 
-        {topic.links && topic.links.length > 0 && (
+        {content?.links && content.links.length > 0 && (
           <div className="card soft tight" style={{ borderColor: "var(--accent-soft)", background: "var(--accent-tint)" }}>
             <div className="row" style={{ gap: 10, alignItems: "flex-start" }}>
               <span style={{ color: "var(--accent-deep)" }}><I.spark size={18} /></span>
               <div>
                 <div style={{ fontWeight: 700, marginBottom: 6, color: "var(--accent-deep)" }}>Полезные ссылки</div>
                 <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5 }}>
-                  {topic.links.map((l, i) => (
+                  {content.links.map((l, i) => (
                     <li key={i}>
                       <a href={l.url} target="_blank" rel="noreferrer" style={{ color: "var(--accent-deep)", fontWeight: 600 }}>
                         {l.title}

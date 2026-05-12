@@ -1,8 +1,8 @@
 import { useProgress } from "../hooks/useProgress";
 import { useActivity } from "../hooks/useActivity";
+import { useCatalog } from "../hooks/useTopicsCatalog";
+import { useUserProfile, formatJoined } from "../hooks/useUserProfile";
 import { computeAchievements, computeBlockStats, computeStats, getRank } from "../lib/stats";
-import { blocks, findTopic } from "../data/topics";
-import { USER_NAME, USER_HANDLE, USER_JOINED } from "../lib/user";
 import { I } from "../components/Icons";
 import { useToast } from "../components/ToastContext";
 
@@ -45,10 +45,17 @@ function timeAgo(iso: string): string {
 export default function Profile() {
   const progress = useProgress();
   const activity = useActivity();
-  const stats = computeStats(progress);
-  const blockStats = computeBlockStats(progress);
-  const achievements = computeAchievements(progress);
+  const catalog = useCatalog();
+  const { profile } = useUserProfile();
+  const stats = computeStats(progress, catalog.topics.length);
+  const blockStats = computeBlockStats(progress, catalog.groups);
+  const achievements = computeAchievements(progress, catalog.groups, catalog.topics.length);
   const { fireToast } = useToast();
+
+  const displayName = profile?.display_name ?? "…";
+  const handle = profile?.handle ?? "—";
+  const joined = profile ? formatJoined(profile.joined_at) : "";
+  const initial = (displayName[0] ?? "?").toUpperCase();
 
   return (
     <div className="col" style={{ gap: 20 }}>
@@ -69,15 +76,15 @@ export default function Profile() {
               boxShadow: "var(--shadow-pop)",
             }}
           >
-            {USER_NAME[0]}
+            {initial}
           </div>
           <div style={{ flex: 1, minWidth: 260 }}>
             <div className="row" style={{ gap: 10, marginBottom: 6 }}>
-              <h1 className="serif" style={{ fontSize: 30 }}>{USER_NAME}</h1>
+              <h1 className="serif" style={{ fontSize: 30 }}>{displayName}</h1>
               <span className="chip accent">Уровень {stats.level}</span>
             </div>
             <div className="muted" style={{ marginBottom: 12 }}>
-              @{USER_HANDLE} · {getRank(stats.level)} · с {USER_JOINED}
+              @{handle} · {getRank(stats.level)}{joined && ` · с ${joined}`}
             </div>
             <div className="progress" style={{ maxWidth: 420, marginBottom: 8 }}>
               <span style={{ width: `${stats.progressInLevel * 100}%` }} />
@@ -87,7 +94,7 @@ export default function Profile() {
             </div>
           </div>
           <div className="row" style={{ gap: 8 }}>
-            <button className="btn btn-ghost" onClick={() => fireToast("Имя зашито в lib/user.ts — пока без UI редактирования")}>
+            <button className="btn btn-ghost" onClick={() => fireToast("Имя редактируется в БД — UI редактора скоро")}>
               Редактировать
             </button>
           </div>
@@ -144,7 +151,7 @@ export default function Profile() {
               <div className="muted small" style={{ padding: 10 }}>Пока ничего нет — закрой первую тему 🚀</div>
             )}
             {activity.recent.map((r, i) => {
-              const t = findTopic(r.topic_id);
+              const t = catalog.topics.find((x) => x.id === r.topic_id);
               const a = statusToActivityType(r.status);
               return (
                 <div
@@ -186,7 +193,7 @@ export default function Profile() {
       <div className="card">
         <SectionTitle icon={<I.book size={16} />} title="Блоки в работе" />
         <div className="col" style={{ gap: 14 }}>
-          {blocks.map((b) => {
+          {catalog.groups.map((b) => {
             const s = blockStats.find((x) => x.blockId === b.id);
             return (
               <div key={b.id} className="row" style={{ gap: 14 }}>

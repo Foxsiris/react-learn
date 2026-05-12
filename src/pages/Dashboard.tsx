@@ -1,9 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useProgress } from "../hooks/useProgress";
 import { useActivity } from "../hooks/useActivity";
+import { useCatalog, findCatalogGroupOf } from "../hooks/useTopicsCatalog";
+import { useUserProfile } from "../hooks/useUserProfile";
 import { computeAchievements, computeBlockStats, computeStats, findCurrentTopic } from "../lib/stats";
-import { blocks, findBlockOf } from "../data/topics";
-import { USER_NAME } from "../lib/user";
 import { I } from "../components/Icons";
 import { useToast } from "../components/ToastContext";
 
@@ -22,11 +22,13 @@ function SectionTitle({ icon, title, action }: { icon: React.ReactNode; title: s
 export default function Dashboard() {
   const progress = useProgress();
   const activity = useActivity();
-  const stats = computeStats(progress);
-  const blockStats = computeBlockStats(progress);
-  const current = findCurrentTopic(progress);
-  const currentBlock = current ? findBlockOf(current.id) : undefined;
-  const achievements = computeAchievements(progress);
+  const catalog = useCatalog();
+  const { profile } = useUserProfile();
+  const stats = computeStats(progress, catalog.topics.length);
+  const blockStats = computeBlockStats(progress, catalog.groups);
+  const current = findCurrentTopic(progress, catalog.topics);
+  const currentGroup = current ? findCatalogGroupOf(catalog, current.id) : undefined;
+  const achievements = computeAchievements(progress, catalog.groups, catalog.topics.length);
   const earned = achievements.filter((a) => a.earned).slice(-3).reverse();
   const navigate = useNavigate();
   const { fireToast } = useToast();
@@ -79,13 +81,13 @@ export default function Dashboard() {
               <I.bolt size={12} /> Продолжаем
             </div>
             <h1 className="serif" style={{ fontSize: 30, marginBottom: 8 }}>
-              Привет, {USER_NAME}! Готов продолжить?
+              Привет, {profile?.display_name ?? "…"}! Готов продолжить?
             </h1>
             <p className="muted" style={{ marginBottom: 18, maxWidth: 520 }}>
               {current ? (
                 <>
                   Сейчас на теме <b style={{ color: "var(--ink)" }}>«{current.title}»</b>
-                  {currentBlock && <> из блока «{currentBlock.title}»</>}. Закроем её сегодня?
+                  {currentGroup && <> из блока «{currentGroup.title}»</>}. Закроем её сегодня?
                 </>
               ) : (
                 <>Весь курс пройден — но всегда можно вернуться и повторить.</>
@@ -247,7 +249,7 @@ export default function Dashboard() {
               }
             />
             <div className="col" style={{ gap: 12 }}>
-              {blocks.slice(0, 4).map((b) => {
+              {catalog.groups.slice(0, 4).map((b) => {
                 const s = blockStats.find((x) => x.blockId === b.id);
                 return (
                   <Link

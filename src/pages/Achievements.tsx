@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useProgress } from "../hooks/useProgress";
+import { useCatalog } from "../hooks/useTopicsCatalog";
 import { computeAchievements } from "../lib/stats";
 import { I } from "../components/Icons";
 import { useToast } from "../components/ToastContext";
@@ -8,7 +9,11 @@ type Filter = "all" | "earned" | "locked";
 
 export default function Achievements() {
   const progress = useProgress();
-  const achievements = useMemo(() => computeAchievements(progress), [progress]);
+  const catalog = useCatalog();
+  const achievements = useMemo(
+    () => computeAchievements(progress, catalog.groups, catalog.topics.length),
+    [progress, catalog.groups, catalog.topics.length]
+  );
   const [filter, setFilter] = useState<Filter>("all");
   const { fireToast } = useToast();
 

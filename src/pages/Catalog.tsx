@@ -1,22 +1,30 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { blocks } from "../data/topics";
 import { useProgress } from "../hooks/useProgress";
+import { useCatalog } from "../hooks/useTopicsCatalog";
 import { computeBlockStats, findCurrentTopic } from "../lib/stats";
 import { I } from "../components/Icons";
 
 export default function Catalog() {
   const progress = useProgress();
-  const blockStats = computeBlockStats(progress);
-  const current = findCurrentTopic(progress);
+  const catalog = useCatalog();
+  const groups = catalog.groups;
+  const blockStats = computeBlockStats(progress, groups);
+  const current = findCurrentTopic(progress, catalog.topics);
 
-  const [active, setActive] = useState<string>(() => {
-    if (!current) return blocks[0]?.id ?? "";
-    const b = blocks.find((bl) => bl.topics.some((t) => t.id === current.id));
-    return b?.id ?? blocks[0]?.id ?? "";
-  });
+  const [active, setActive] = useState<string>("");
+  const activeId = active || (() => {
+    if (current) {
+      const g = groups.find((bl) => bl.topics.some((t) => t.id === current.id));
+      if (g) return g.id;
+    }
+    return groups[0]?.id ?? "";
+  })();
 
-  const activeBlock = useMemo(() => blocks.find((b) => b.id === active) ?? blocks[0], [active]);
+  const activeBlock = useMemo(
+    () => groups.find((b) => b.id === activeId) ?? groups[0],
+    [groups, activeId]
+  );
   const [search, setSearch] = useState("");
 
   const filteredTopics = useMemo(() => {
@@ -24,7 +32,7 @@ export default function Catalog() {
     if (!search.trim()) return activeBlock.topics;
     const q = search.toLowerCase();
     return activeBlock.topics.filter(
-      (t) => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
+      (t) => t.title.toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q)
     );
   }, [activeBlock, search]);
 
@@ -37,8 +45,8 @@ export default function Catalog() {
 
       <div className="row between" style={{ flexWrap: "wrap", gap: 10 }}>
         <div className="tabs" style={{ flexWrap: "wrap" }}>
-          {blocks.map((b) => (
-            <button key={b.id} className={active === b.id ? "active" : ""} onClick={() => setActive(b.id)}>
+          {groups.map((b) => (
+            <button key={b.id} className={activeId === b.id ? "active" : ""} onClick={() => setActive(b.id)}>
               {b.emoji} {b.title}
             </button>
           ))}
@@ -56,9 +64,9 @@ export default function Catalog() {
       </div>
 
       <div className="grid-3">
-        {blocks.map((b) => {
+        {groups.map((b) => {
           const s = blockStats.find((x) => x.blockId === b.id);
-          const isActive = b.id === active;
+          const isActive = b.id === activeId;
           return (
             <div
               key={b.id}
@@ -157,7 +165,7 @@ export default function Catalog() {
                       <div className="muted small" style={{ marginBottom: 10 }}>{t.description}</div>
                       <div className="row between small">
                         <span className="muted">
-                          {t.examples.length > 0 ? `${t.examples.length} примера` : "теория"}
+                          {t.example_count > 0 ? `${t.example_count} примера` : "теория"}
                         </span>
                         {isCurrent && (
                           <span style={{ color: "var(--accent-deep)", fontWeight: 700 }}>
@@ -174,7 +182,7 @@ export default function Catalog() {
               })}
               {filteredTopics.length === 0 && (
                 <div className="road-empty small">
-                  Ничего не найдено по «{search}»
+                  {catalog.loading ? "Загружаем карту…" : `Ничего не найдено по «${search}»`}
                 </div>
               )}
             </div>

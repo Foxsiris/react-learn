@@ -2,12 +2,13 @@ import { useSyncExternalStore } from "react";
 import type { TopicStatus } from "../data/topics";
 import { supabase } from "../lib/supabase";
 
-const TABLE = "topic_progress";
+const TABLE = "user_progress";
 const LEGACY_STORAGE_KEY = "react-learn:progress";
 
 type ProgressMap = Record<string, TopicStatus>;
 
 let cache: ProgressMap = {};
+let cacheUserId: string | null = null;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -16,14 +17,16 @@ function emit() {
 
 function subscribe(cb: () => void) {
   listeners.add(cb);
-  return () => listeners.delete(cb);
+  return () => {
+    listeners.delete(cb);
+  };
 }
 
 function getSnapshot() {
   return cache;
 }
 
-async function migrateLegacy(remote: ProgressMap) {
+async function migrateLegacy(userId: string, remote: ProgressMap) {
   try {
     const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return;
@@ -31,7 +34,7 @@ async function migrateLegacy(remote: ProgressMap) {
     const now = new Date().toISOString();
     const toUpload = Object.entries(legacy)
       .filter(([id]) => !(id in remote))
-      .map(([topic_id, status]) => ({ topic_id, status, updated_at: now }));
+      .map(([topic_id, status]) => ({ user_id: userId, topic_id, status, updated_at: now }));
     if (toUpload.length > 0) {
       const { error } = await supabase.from(TABLE).upsert(toUpload);
       if (error) {
@@ -42,17 +45,21 @@ async function migrateLegacy(remote: ProgressMap) {
     }
     localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
-    // private mode / parse error — ignore
+    /* private mode / parse error — ignore */
   }
 }
 
-let hydrated = false;
-async function hydrate() {
-  if (hydrated) return;
-  hydrated = true;
+export async function hydrateProgressFor(userId: string | null) {
+  if (userId === cacheUserId) return;
+  cacheUserId = userId;
+  cache = {};
+  emit();
+  if (!userId) return;
+
   const { data, error } = await supabase
     .from(TABLE)
-    .select("topic_id, status");
+    .select("topic_id, status")
+    .eq("user_id", userId);
   if (error || !data) {
     console.error("[supabase] hydrate failed:", error);
     return;
@@ -62,19 +69,24 @@ async function hydrate() {
     remote[row.topic_id] = row.status;
   }
   cache = remote;
-  await migrateLegacy(remote);
+  await migrateLegacy(userId, remote);
   emit();
 }
-hydrate();
 
 async function syncRemote(topicId: string, status: TopicStatus | null) {
+  const userId = cacheUserId;
+  if (!userId) return;
   if (status === null) {
-    const { error } = await supabase.from(TABLE).delete().eq("topic_id", topicId);
+    const { error } = await supabase
+      .from(TABLE)
+      .delete()
+      .eq("user_id", userId)
+      .eq("topic_id", topicId);
     if (error) console.error("[supabase] delete failed:", error);
   } else {
     const { error } = await supabase
       .from(TABLE)
-      .upsert({ topic_id: topicId, status, updated_at: new Date().toISOString() });
+      .upsert({ user_id: userId, topic_id: topicId, status, updated_at: new Date().toISOString() });
     if (error) console.error("[supabase] upsert failed:", error);
   }
 }
