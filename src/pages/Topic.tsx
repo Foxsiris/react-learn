@@ -52,8 +52,8 @@ export default function TopicPage() {
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 20 }}>
-      <div className="card tight" style={{ height: "fit-content", position: "sticky", top: 86 }}>
+    <div className="topic-layout">
+      <div className="card tight topic-toc" style={{ height: "fit-content", position: "sticky", top: 86 }}>
         <Link to="/catalog" className="btn btn-quiet small" style={{ padding: "6px 8px", marginBottom: 8 }}>
           <I.arrowL size={14} /> К карте
         </Link>

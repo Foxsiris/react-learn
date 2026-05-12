@@ -93,7 +93,7 @@ function Sidebar({ currentLessonId }: { currentLessonId: string | undefined }) {
   );
 }
 
-function Topbar({ currentLessonId }: { currentLessonId: string | undefined }) {
+function Topbar({ currentLessonId, isTopicRoute }: { currentLessonId: string | undefined; isTopicRoute: boolean }) {
   const progress = useProgress();
   const activity = useActivity();
   const catalog = useCatalog();
@@ -109,6 +109,11 @@ function Topbar({ currentLessonId }: { currentLessonId: string | undefined }) {
 
   return (
     <div className="topbar">
+      {isTopicRoute && (
+        <NavLink to="/catalog" className="topic-back-btn" aria-label="К карте обучения">
+          <I.arrowL size={18} />
+        </NavLink>
+      )}
       <div className="row" style={{ gap: 14, flex: 1 }}>
         <div style={{ position: "relative", maxWidth: 360, flex: 1 }}>
           <I.search size={14} style={{ position: "absolute", left: 12, top: 11, color: "var(--muted)" }} />
@@ -277,11 +282,13 @@ function LayoutInner() {
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate, current?.id]);
 
+  const isTopicRoute = location.pathname.startsWith("/topic/");
+
   return (
-    <div className="app">
+    <div className={"app" + (isTopicRoute ? " topic-mode" : "")}>
       <Sidebar currentLessonId={current?.id} />
       <div className="main">
-        <Topbar currentLessonId={current?.id} />
+        <Topbar currentLessonId={current?.id} isTopicRoute={isTopicRoute} />
         <main className="content">
           <Outlet />
         </main>
