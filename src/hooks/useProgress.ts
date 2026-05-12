@@ -54,6 +54,18 @@ async function hydrate() {
 }
 hydrate();
 
+async function syncRemote(topicId: string, status: TopicStatus | null) {
+  if (status === null) {
+    const { error } = await supabase.from(TABLE).delete().eq("topic_id", topicId);
+    if (error) console.error("[supabase] delete failed:", error);
+  } else {
+    const { error } = await supabase
+      .from(TABLE)
+      .upsert({ topic_id: topicId, status, updated_at: new Date().toISOString() });
+    if (error) console.error("[supabase] upsert failed:", error);
+  }
+}
+
 export function setStatus(topicId: string, status: TopicStatus | null) {
   cache = { ...cache };
   if (status === null) {
@@ -63,14 +75,7 @@ export function setStatus(topicId: string, status: TopicStatus | null) {
   }
   writeLocal(cache);
   emit();
-
-  if (status === null) {
-    void supabase.from(TABLE).delete().eq("topic_id", topicId);
-  } else {
-    void supabase
-      .from(TABLE)
-      .upsert({ topic_id: topicId, status, updated_at: new Date().toISOString() });
-  }
+  void syncRemote(topicId, status);
 }
 
 export function useProgress() {
