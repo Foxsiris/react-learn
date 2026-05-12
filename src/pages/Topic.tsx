@@ -2,6 +2,7 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useMemo } from "react";
 import { findTopic, type TopicStatus } from "../data/topics";
 import { useCatalog, findCatalogGroupOf } from "../hooks/useTopicsCatalog";
+import { getBrainNote } from "../data/brainNotes";
 import TheoryRenderer from "../components/TheoryRenderer";
 import LiveExample from "../components/LiveExample";
 import { I, type IconKey } from "../components/Icons";
@@ -140,7 +141,7 @@ export default function TopicPage() {
             {meta.description}
           </p>
 
-          {content && <TheoryRenderer markdown={content.theory} />}
+          <TheoryRenderer markdown={getBrainNote(id) ?? content?.theory ?? ""} />
         </div>
 
         {content && content.examples.length > 0 && (

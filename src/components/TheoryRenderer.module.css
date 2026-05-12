@@ -1,7 +1,9 @@
 .theory {
-  line-height: 1.65;
-  color: var(--text);
+  line-height: 1.7;
+  color: var(--text, var(--ink-1));
   font-size: 15px;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .theory p {
@@ -14,40 +16,163 @@
 }
 
 .theory li {
+  margin: 6px 0;
+}
+
+.theory li > p {
   margin: 4px 0;
 }
 
+.theory li > ul,
+.theory li > ol {
+  margin: 6px 0;
+}
+
+.theory h1 {
+  margin-top: 30px;
+  margin-bottom: 14px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
 .theory h2 {
-  margin-top: 24px;
+  margin-top: 28px;
   margin-bottom: 12px;
-  font-size: 20px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .theory h3 {
-  margin-top: 20px;
+  margin-top: 22px;
   margin-bottom: 10px;
   font-size: 17px;
+  font-weight: 700;
+}
+
+.theory h4 {
+  margin-top: 18px;
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-2, var(--text));
 }
 
 .theory strong {
-  color: var(--text);
+  color: var(--text, var(--ink-1));
+  font-weight: 700;
+}
+
+.theory em {
+  font-style: italic;
+}
+
+.theory hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 28px 0;
+}
+
+.theory blockquote {
+  margin: 14px 0;
+  padding: 10px 16px;
+  border-left: 3px solid var(--accent, #6c5ce7);
+  background: var(--accent-tint, rgba(108, 92, 231, 0.06));
+  border-radius: 0 8px 8px 0;
+  color: var(--ink-2, var(--text));
+}
+
+.theory blockquote > p {
+  margin: 6px 0;
+}
+
+.theory blockquote > p:first-child {
+  margin-top: 0;
+}
+
+.theory blockquote > p:last-child {
+  margin-bottom: 0;
+}
+
+.theory a {
+  color: var(--accent-deep, var(--accent, #5b4bcf));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.theory a:hover {
+  text-decoration: none;
+}
+
+.theory .inlineCode,
+.theory :global(code):not(pre code) {
+  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  color: var(--accent-deep, #5b4bcf);
+}
+
+.theory .code {
+  margin: 14px 0;
+  background: #1e1e1e;
+  color: #e6e6e6;
+  border-radius: 10px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.55;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  position: relative;
+}
+
+.theory .code[data-lang]::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.4);
   font-weight: 600;
+}
+
+.theory .code code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
 }
 
 .table {
   border-collapse: collapse;
-  margin: 14px 0;
+  margin: 16px 0;
   width: 100%;
   font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .table th, .table td {
   border: 1px solid var(--border);
   padding: 8px 12px;
   text-align: left;
+  vertical-align: top;
 }
 
 .table th {
-  background: var(--bg-tertiary);
-  font-weight: 600;
+  background: var(--surface-2, rgba(0, 0, 0, 0.04));
+  font-weight: 700;
+}
+
+.theory img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 12px 0;
 }
