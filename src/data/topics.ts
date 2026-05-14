@@ -2607,6 +2607,2040 @@ export default function App() {
       },
     ],
   },
+  {
+    id: "system-design",
+    emoji: "🏗️",
+    title: "System Design (фронтенд)",
+    description: "Архитектура клиентских приложений: рендеринг, данные, производительность, надёжность",
+    topics: [
+      {
+        id: "rendering-strategies",
+        title: "Стратегии рендеринга",
+        description: "CSR, SSR, SSG, ISR, Streaming SSR, RSC — что выбрать",
+        theory: r(`
+Главный вопрос фронтенд-архитектуры: **где и когда превращается код в HTML**. От ответа зависят скорость, SEO, нагрузка на сервер и сложность инфраструктуры.
+
+### CSR — Client-Side Rendering
+Сервер отдаёт почти пустой \`<div id="root">\`, всё рисует JS в браузере.
+- ✅ Дёшево хостить (статика + CDN), простой деплой, отличная интерактивность после загрузки.
+- ❌ Долгий **FCP/LCP** (пустой экран, пока качается и парсится бандл), слабое SEO без пре-рендера.
+- Применение: внутренние дашборды, SPA за авторизацией.
+
+### SSR — Server-Side Rendering
+HTML собирается на сервере **на каждый запрос**, затем «оживает» в браузере (гидратация).
+- ✅ Быстрый контентный FCP, хорошее SEO, свежие данные.
+- ❌ Нагрузка на сервер (TTFB растёт), «uncanny valley»: видно, но не кликается до гидратации.
+- Применение: маркетплейсы, контент с персонализацией.
+
+### SSG — Static Site Generation
+HTML генерится **во время сборки**, раздаётся как статика.
+- ✅ Максимально быстрый TTFB, дёшево, безопасно.
+- ❌ Данные «застывают» на момент билда, долгая пересборка большого числа страниц.
+- Применение: блоги, документация, лендинги.
+
+### ISR — Incremental Static Regeneration
+SSG + фоновое обновление: страница пере-генерируется по таймеру или по запросу, не блокируя пользователя.
+- Компромисс «статика + почти свежие данные».
+
+### Streaming SSR + RSC
+Сервер отдаёт HTML **по кускам** (\`<Suspense>\`-границы стримятся по мере готовности данных). **React Server Components** выполняются только на сервере, не попадают в бандл, не гидратируются.
+- ✅ Быстрый первый байт, тяжёлая логика и зависимости остаются на сервере, меньше JS у клиента.
+- ❌ Новая ментальная модель, граница «server/client» требует дисциплины.
+
+### Как выбирать
+
+| Критерий | CSR | SSR | SSG | RSC/Streaming |
+|---|---|---|---|---|
+| TTFB | ⚡ | 🐢 | ⚡⚡ | ⚡ |
+| Свежесть данных | ⚡ | ⚡ | 🐢 | ⚡ |
+| SEO | ❌ | ✅ | ✅ | ✅ |
+| Стоимость инфры | 💲 | 💲💲💲 | 💲 | 💲💲 |
+| JS у клиента | много | много | мало | минимум |
+
+**Гидратация** — самая дорогая часть SSR: React заново строит дерево и навешивает обработчики. Лечится **partial / progressive hydration** (островная архитектура — Astro, Qwik с «resumability»).
+        `),
+        examples: [
+          {
+            title: "Таймлайн загрузки: CSR vs SSR vs SSG",
+            description: "Сравни, когда пользователь видит контент и когда страница становится кликабельной",
+            code: r(`
+import { useState } from "react";
+
+const STRATEGIES = {
+  CSR: { ttfb: 80,  fcp: 1400, tti: 1800, note: "Пустой экран, пока грузится бандл" },
+  SSR: { ttfb: 600, fcp: 750,  tti: 1900, note: "Контент рано, клики — после гидратации" },
+  SSG: { ttfb: 50,  fcp: 250,  tti: 1500, note: "HTML с CDN мгновенно" },
+};
+
+function Bar({ label, ms, max, color }) {
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 12, marginBottom: 2 }}>{label}: {ms}ms</div>
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: (ms / max) * 100 + "%" }}
+        transition={{ duration: 0.5 }}
+        style={{ height: 14, background: color, borderRadius: 4 }}
+      />
+    </div>
+  );
+}
+
+export default function App() {
+  const [strat, setStrat] = useState("SSG");
+  const s = STRATEGIES[strat];
+  const max = 2000;
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {Object.keys(STRATEGIES).map((k) => (
+          <button
+            key={k}
+            onClick={() => setStrat(k)}
+            style={{
+              padding: "6px 14px", borderRadius: 8, cursor: "pointer",
+              border: "1px solid #888",
+              background: strat === k ? "#6366f1" : "transparent",
+              color: strat === k ? "white" : "inherit",
+            }}
+          >{k}</button>
+        ))}
+      </div>
+      <Bar label="TTFB (первый байт)" ms={s.ttfb} max={max} color="#94a3b8" />
+      <Bar label="FCP (виден контент)" ms={s.fcp} max={max} color="#22c55e" />
+      <Bar label="TTI (можно кликать)" ms={s.tti} max={max} color="#6366f1" />
+      <p style={{ fontSize: 13, color: "#888", marginTop: 12 }}>💡 {s.note}</p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "data-fetching",
+        title: "Получение данных и кеширование",
+        description: "Waterfall, параллельные запросы, stale-while-revalidate, инвалидация",
+        theory: r(`
+Серверное состояние — это не то же самое, что состояние UI. Оно **чужое** (живёт на сервере), **устаревает** и **разделяется** между компонентами. Поэтому для него нужны отдельные паттерны.
+
+### Водопады запросов (request waterfall)
+Антипаттерн: компонент A грузит данные → внутри рендерит B, который грузит свои данные → и т.д. Запросы выстраиваются в цепочку, и общее время = сумма.
+
+**Лечение:**
+- **Hoisting** — поднять загрузку выше, запустить параллельно (\`Promise.all\`).
+- **Prefetching** — начать грузить данные до того, как компонент смонтировался (на ховер ссылки, на этапе роутинга).
+- **Loaders** в роутере (React Router / Next.js) — данные грузятся параллельно с кодом маршрута.
+
+### Stale-While-Revalidate (SWR)
+Стратегия кеша: **сразу отдай из кеша (stale)**, **в фоне сходи за свежим (revalidate)**, обнови UI. Пользователь не видит спиннер на повторных заходах.
+
+\`\`\`
+запрос → есть в кеше? → да → показать кеш + фоновый refetch
+                      → нет → показать загрузку → запрос → кеш
+\`\`\`
+
+### Ключевые понятия (React Query / SWR / RTK Query)
+- **queryKey** — нормализованный ключ кеша. От него зависит дедупликация и инвалидация.
+- **staleTime** — сколько данные считаются свежими (refetch не нужен).
+- **gcTime / cacheTime** — сколько хранить неиспользуемый кеш.
+- **Дедупликация** — два компонента с одним ключом → один сетевой запрос.
+- **Инвалидация** — после мутации помечаем связанные ключи устаревшими → авто-refetch.
+
+### Нормализация
+Если одна сущность встречается в разных списках — храни её **один раз** по id (\`{ users: { 1: {...} } }\`), а списки держат только id. Иначе после правки придётся обновлять её во всех местах.
+
+### Подводные камни
+- **Race condition**: пользователь быстро меняет фильтр, ответы приходят не по порядку → показывается старый. Лечится \`AbortController\` или сверкой с актуальным ключом.
+- **Over-fetching** — тянем поля «на всякий случай». GraphQL/BFF помогает.
+- **Кеш без TTL** растёт бесконечно — нужен \`gcTime\`.
+        `),
+        examples: [
+          {
+            title: "Stale-While-Revalidate своими руками",
+            description: "Первый заход — спиннер; повторный — мгновенно из кеша + тихий refetch в фоне",
+            code: r(`
+import { useState, useEffect, useRef } from "react";
+
+const cache = new Map();
+
+function fakeApi(id) {
+  return new Promise((res) =>
+    setTimeout(() => res({ id, value: Math.floor(Math.random() * 100), at: new Date().toLocaleTimeString() }), 900)
+  );
+}
+
+function useSWR(key) {
+  const [data, setData] = useState(() => cache.get(key) ?? null);
+  const [revalidating, setRevalidating] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setData(cache.get(key) ?? null);
+    setRevalidating(true);
+    fakeApi(key).then((fresh) => {
+      if (!alive) return;
+      cache.set(key, fresh);
+      setData(fresh);
+      setRevalidating(false);
+    });
+    return () => { alive = false; };
+  }, [key]);
+
+  return { data, revalidating, fromCache: cache.has(key) };
+}
+
+export default function App() {
+  const [id, setId] = useState(1);
+  const { data, revalidating } = useSWR(id);
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        {[1, 2, 3].map((n) => (
+          <button key={n} onClick={() => setId(n)}
+            style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer",
+              border: "1px solid #888", background: id === n ? "#6366f1" : "transparent",
+              color: id === n ? "white" : "inherit" }}>
+            User #{n}
+          </button>
+        ))}
+      </div>
+      {!data ? (
+        <p>⏳ Первая загрузка...</p>
+      ) : (
+        <div style={{ border: "1px solid #888", borderRadius: 10, padding: 14 }}>
+          <p><b>User #{data.id}</b> · значение: {data.value}</p>
+          <p style={{ fontSize: 12, color: "#888" }}>загружено в {data.at}</p>
+          {revalidating && <p style={{ fontSize: 12, color: "#22c55e" }}>🔄 обновляю в фоне...</p>}
+        </div>
+      )}
+      <p style={{ fontSize: 12, color: "#888", marginTop: 12 }}>
+        Переключайся между юзерами туда-обратно — повторный заход мгновенный.
+      </p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "perf-loading",
+        title: "Производительность загрузки",
+        description: "Бандл, code splitting, prefetch, критический путь, Core Web Vitals",
+        theory: r(`
+Скорость загрузки — это про **критический путь рендеринга**: что обязательно должно скачаться и выполниться, прежде чем пользователь увидит и сможет использовать страницу.
+
+### Core Web Vitals
+- **LCP** (Largest Contentful Paint) — когда отрисован самый большой элемент. Цель < 2.5с. Враги: тяжёлые картинки, медленный сервер, render-blocking ресурсы.
+- **CLS** (Cumulative Layout Shift) — «прыжки» вёрстки. Цель < 0.1. Враги: картинки без размеров, шрифты, поздно подгруженные баннеры.
+- **INP** (Interaction to Next Paint) — задержка отклика на действие. Цель < 200мс. Враги: долгие задачи в main thread, тяжёлая гидратация.
+
+### Уменьшаем бандл
+- **Code splitting** — \`React.lazy(() => import("./Heavy"))\` + \`<Suspense>\`. Делим по роутам и по тяжёлым виджетам (графики, редакторы).
+- **Tree shaking** — импортируй именованно (\`import { x } from "lib"\`), избегай side-effect-импортов; \`"sideEffects": false\` в package.json.
+- **Анализ** — \`rollup-plugin-visualizer\` / \`source-map-explorer\`: видно, что раздуло бандл (часто moment.js, lodash целиком, дубли версий).
+
+### Управляем загрузкой ресурсов
+- \`<link rel="preload">\` — «это нужно скоро, скачай в приоритете» (шрифт, hero-картинка).
+- \`<link rel="prefetch">\` — «понадобится на следующей странице, скачай в простое».
+- \`rel="preconnect"\` — заранее открыть соединение к стороннему домену (API, CDN).
+- \`loading="lazy"\` на \`<img>\` / \`<iframe>\` — отложить вне-экранное.
+- \`fetchpriority="high"\` — поднять приоритет LCP-картинки.
+
+### Картинки
+Часто 70% веса страницы. Современный формат (AVIF/WebP), \`srcset\` + \`sizes\` для отзывчивости, явные \`width/height\` (против CLS), blur-placeholder.
+
+### Шрифты
+\`font-display: swap\` (показать системный, заменить когда загрузится), \`preload\` критичного шрифта, подмножество глифов (subsetting).
+        `),
+        examples: [
+          {
+            title: "Ленивая загрузка по IntersectionObserver",
+            description: "Карточки грузят «тяжёлый» контент только когда попадают в зону видимости",
+            code: r(`
+import { useState, useEffect, useRef } from "react";
+
+function LazyCard({ index }) {
+  const ref = useRef(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => setLoaded(true), 400);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.3 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} style={{
+      height: 90, borderRadius: 10, marginBottom: 10,
+      border: "1px solid #888", display: "flex", alignItems: "center",
+      justifyContent: "center", overflow: "hidden",
+      background: loaded ? "#6366f1" : "#1e293b", color: "white",
+      transition: "background 0.4s",
+    }}>
+      {loaded ? (
+        <motion.span initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}>
+          ✅ Карточка #{index} загружена
+        </motion.span>
+      ) : (
+        <span style={{ color: "#64748b" }}>⏳ скролль ниже...</span>
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <div style={{ padding: 20, height: 260, overflowY: "auto", fontFamily: "sans-serif" }}>
+      <p style={{ fontSize: 13, color: "#888" }}>Скролль — контент грузится по мере появления:</p>
+      {Array.from({ length: 12 }, (_, i) => <LazyCard key={i} index={i + 1} />)}
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "rendering-perf",
+        title: "Производительность рендеринга",
+        description: "Виртуализация, debounce/throttle, Web Workers, мемоизация",
+        theory: r(`
+После загрузки начинается вторая битва — за плавность. У браузера ~16мс на кадр (60fps). Всё, что дольше, — это «фриз».
+
+### Виртуализация (windowing)
+Список из 10 000 строк → 10 000 DOM-узлов → браузер умирает. Решение: рендерить **только видимые** строки + небольшой буфер. Под капотом — контейнер фиксированной высоты, абсолютно позиционированные видимые элементы, пересчёт диапазона на скролле (часто через бинарный поиск по offsets).
+Библиотеки: \`@tanstack/virtual\`, \`react-window\`, \`react-virtuoso\`.
+
+### Debounce vs Throttle
+- **Debounce** — выполнить **через X мс после последнего** события. Поиск по мере ввода, авто-сохранение.
+- **Throttle** — выполнять **не чаще раза в X мс**. Скролл, resize, mousemove.
+
+\`\`\`js
+const debounced = useMemo(() => debounce(fn, 300), []);
+\`\`\`
+
+### Web Workers
+JS однопоточный. Тяжёлый счёт (парсинг большого CSV, сортировка 1М элементов, обработка изображения) блокирует UI. Worker выполняет это в **отдельном потоке**, общение через \`postMessage\`. Библиотека \`comlink\` превращает это в обычные async-вызовы.
+
+### Мемоизация — без фанатизма
+- \`React.memo\` — пропускает ре-рендер при равных пропсах (shallow).
+- \`useMemo\` — кеширует дорогое вычисление.
+- \`useCallback\` — стабильная ссылка на функцию (нужна, когда функция уходит в \`memo\`-компонент или в deps).
+
+⚠️ Мемоизация **не бесплатна** — сравнение и хранение тоже стоят. Сначала **профилируй** (React DevTools Profiler), потом оптимизируй точечно. Преждевременная мемоизация всего — это шум и баги с устаревшими замыканиями.
+
+### Прочее
+- **CSS-анимации / transform** вместо анимаций через JS и layout-свойств (\`top\`, \`width\`).
+- **\`content-visibility: auto\`** — браузер сам пропускает рендер вне-экранного.
+- **Батчинг** — React 18 батчит \`setState\` даже в промисах и таймерах.
+        `),
+        examples: [
+          {
+            title: "Виртуализированный список: 10 000 строк, ~15 в DOM",
+            description: "Рендерятся только видимые строки — DOM остаётся крошечным при любом размере данных",
+            code: r(`
+import { useState, useRef } from "react";
+
+const TOTAL = 10000;
+const ROW_H = 32;
+const VIEWPORT = 260;
+
+export default function App() {
+  const [scrollTop, setScrollTop] = useState(0);
+  const buffer = 4;
+
+  const first = Math.max(0, Math.floor(scrollTop / ROW_H) - buffer);
+  const visibleCount = Math.ceil(VIEWPORT / ROW_H) + buffer * 2;
+  const last = Math.min(TOTAL, first + visibleCount);
+
+  const rows = [];
+  for (let i = first; i < last; i++) {
+    rows.push(
+      <div key={i} style={{
+        position: "absolute", top: i * ROW_H, height: ROW_H, left: 0, right: 0,
+        display: "flex", alignItems: "center", padding: "0 12px",
+        borderBottom: "1px solid #33415555",
+        background: i % 2 ? "#1e293b" : "transparent", color: "white",
+      }}>
+        Строка #{i}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <p style={{ fontSize: 13, color: "#888" }}>
+        Всего строк: {TOTAL.toLocaleString()} · в DOM сейчас: <b>{last - first}</b>
+      </p>
+      <div
+        onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+        style={{ height: VIEWPORT, overflowY: "auto", border: "1px solid #888", borderRadius: 8 }}
+      >
+        <div style={{ height: TOTAL * ROW_H, position: "relative" }}>{rows}</div>
+      </div>
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "Debounce vs Throttle вживую",
+            description: "Печатай в поле и води мышкой — увидишь разницу поведения",
+            code: r(`
+import { useState, useRef } from "react";
+
+export default function App() {
+  const [debounced, setDebounced] = useState("");
+  const [throttled, setThrottled] = useState(0);
+  const [rawKeys, setRawKeys] = useState(0);
+  const [rawMoves, setRawMoves] = useState(0);
+  const dTimer = useRef(null);
+  const tLast = useRef(0);
+
+  const onType = (e) => {
+    const v = e.target.value;
+    setRawKeys((k) => k + 1);
+    clearTimeout(dTimer.current);
+    dTimer.current = setTimeout(() => setDebounced(v), 400);
+  };
+
+  const onMove = () => {
+    setRawMoves((m) => m + 1);
+    const now = Date.now();
+    if (now - tLast.current >= 200) {
+      tLast.current = now;
+      setThrottled((t) => t + 1);
+    }
+  };
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <p style={{ fontWeight: 600 }}>Debounce (400мс) — «поиск по вводу»</p>
+      <input onChange={onType} placeholder="печатай быстро..."
+        style={{ padding: 8, borderRadius: 6, border: "1px solid #888", width: "100%" }} />
+      <p style={{ fontSize: 13 }}>нажатий: {rawKeys} → запросов: <b>{debounced ? debounced : "—"}</b></p>
+
+      <p style={{ fontWeight: 600, marginTop: 16 }}>Throttle (200мс) — «обработчик скролла»</p>
+      <div onMouseMove={onMove} style={{
+        height: 70, border: "1px dashed #888", borderRadius: 8,
+        display: "grid", placeItems: "center", color: "#888",
+      }}>води здесь мышкой</div>
+      <p style={{ fontSize: 13 }}>событий mousemove: {rawMoves} → обработано: <b>{throttled}</b></p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "optimistic-ui",
+        title: "Оптимистичный UI и устойчивость к сети",
+        description: "Optimistic updates, rollback, retry с backoff, offline-очередь",
+        theory: r(`
+Сеть медленная и ненадёжная. Хороший фронтенд **не заставляет ждать** и **корректно переживает ошибки**.
+
+### Оптимистичные обновления
+Не жди ответа сервера — **сразу обнови UI**, исходя из предположения, что запрос пройдёт. Если упал — **откатись** (rollback) и покажи ошибку.
+
+\`\`\`
+клик «лайк» → +1 в UI мгновенно → запрос на сервер
+   ├─ успех  → ничего не делаем (UI уже верный)
+   └─ ошибка → откат -1 + тост «не получилось»
+\`\`\`
+
+Где уместно: лайки, чекбоксы, переименование, добавление в список. Где **не**: платежи, необратимые действия — там нужен честный лоадер.
+
+### Retry с экспоненциальным backoff
+Запрос упал из-за сети/5xx → повтори. Но не сразу и не бесконечно: задержки растут \`1с, 2с, 4с, 8с...\` + **jitter** (случайный разброс), чтобы тысячи клиентов не ретраили синхронно («thundering herd»).
+Ретраить можно только **идемпотентные** операции (GET, PUT, DELETE), POST — осторожно (нужен idempotency key).
+
+### Offline-очередь
+Действия пользователя складываются в очередь (в \`localStorage\`/IndexedDB). При восстановлении сети — проигрываются по порядку. Так работают PWA-«запиши заметку в самолёте».
+
+### Состояния, о которых забывают
+У любого асинхронного UI их минимум 4: **idle / loading / success / error**. Плюс часто: **empty** (запрос успешен, но данных нет) и **partial** (часть загрузилась). Скелетоны лучше спиннеров — нет «прыжка» layout.
+        `),
+        examples: [
+          {
+            title: "Оптимистичный лайк с откатом при ошибке",
+            description: "~40% запросов «падают» — лайк ставится мгновенно, потом откатывается",
+            code: r(`
+import { useState } from "react";
+
+function fakeRequest() {
+  return new Promise((res, rej) =>
+    setTimeout(() => (Math.random() < 0.4 ? rej(new Error("network")) : res()), 700)
+  );
+}
+
+export default function App() {
+  const [likes, setLikes] = useState(120);
+  const [liked, setLiked] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [pending, setPending] = useState(false);
+
+  const toggle = async () => {
+    if (pending) return;
+    const prevLiked = liked, prevLikes = likes;
+    // оптимистично
+    setLiked(!liked);
+    setLikes(likes + (liked ? -1 : 1));
+    setPending(true);
+    setToast(null);
+    try {
+      await fakeRequest();
+    } catch {
+      // откат
+      setLiked(prevLiked);
+      setLikes(prevLikes);
+      setToast("❌ Не удалось — откатили");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <motion.button
+        onClick={toggle}
+        whileTap={{ scale: 0.9 }}
+        style={{
+          padding: "10px 20px", borderRadius: 12, cursor: "pointer", fontSize: 16,
+          border: "1px solid #888",
+          background: liked ? "#ef4444" : "transparent",
+          color: liked ? "white" : "inherit",
+        }}
+      >
+        {liked ? "❤️" : "🤍"} {likes}
+      </motion.button>
+      {pending && <span style={{ marginLeft: 10, fontSize: 12, color: "#888" }}>отправка...</span>}
+      {toast && <p style={{ color: "#ef4444", fontSize: 13 }}>{toast}</p>}
+      <p style={{ fontSize: 12, color: "#888", marginTop: 10 }}>
+        UI меняется сразу — сеть догоняет. При ошибке состояние возвращается.
+      </p>
+    </div>
+  );
+}
+`),
+          },
+          {
+            title: "Retry с экспоненциальным backoff",
+            description: "Запрос ретраится с растущими паузами 0.5с → 1с → 2с, плюс jitter",
+            code: r(`
+import { useState } from "react";
+
+function flakyApi(attempt) {
+  // «получается» только с 4-й попытки
+  return new Promise((res, rej) =>
+    setTimeout(() => (attempt >= 4 ? res("✅ данные получены") : rej(new Error("503"))), 300)
+  );
+}
+
+export default function App() {
+  const [log, setLog] = useState([]);
+  const [running, setRunning] = useState(false);
+
+  const run = async () => {
+    setRunning(true);
+    setLog([]);
+    const add = (m) => setLog((l) => [...l, m]);
+    let attempt = 0;
+    const maxRetries = 5;
+    while (attempt < maxRetries) {
+      attempt++;
+      try {
+        add("Попытка " + attempt + "...");
+        const result = await flakyApi(attempt);
+        add(result);
+        break;
+      } catch (e) {
+        if (attempt >= maxRetries) { add("💀 Сдаёмся после " + attempt + " попыток"); break; }
+        const base = 500 * Math.pow(2, attempt - 1);
+        const jitter = Math.floor(Math.random() * 200);
+        const delay = base + jitter;
+        add("  ↳ упало (" + e.message + "), ждём " + delay + "мс");
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+    setRunning(false);
+  };
+
+  return (
+    <div style={{ padding: 20, fontFamily: "monospace" }}>
+      <button onClick={run} disabled={running}
+        style={{ padding: "8px 16px", borderRadius: 8, cursor: "pointer", marginBottom: 12 }}>
+        {running ? "выполняется..." : "Запустить запрос"}
+      </button>
+      <div style={{ fontSize: 13, lineHeight: 1.7 }}>
+        {log.map((l, i) => (
+          <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}>{l}</motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "realtime",
+        title: "Реалтайм: WebSocket, SSE, polling",
+        description: "Три способа «живых» данных и когда какой выбрать",
+        theory: r(`
+«Живые» данные (чаты, нотификации, котировки, презенс) можно доставлять тремя способами.
+
+### Short polling
+Клиент раз в N секунд спрашивает «что нового?».
+- ✅ Тривиально, работает везде, без спецсервера.
+- ❌ Задержка до N сек, лишние запросы вхолостую, нагрузка на сервер.
+- Когда: данные редко меняются, реалтайм не критичен.
+
+### Long polling
+Запрос «висит» открытым, пока сервер не ответит (есть новость или таймаут), затем сразу новый.
+- ✅ Почти мгновенно, поверх обычного HTTP.
+- ❌ Сложнее на сервере, накладные расходы на переустановку соединений.
+
+### SSE — Server-Sent Events
+Однонаправленный поток **сервер → клиент** поверх HTTP (\`EventSource\`).
+- ✅ Простой API, авто-reconnect из коробки, проходит через прокси, текстовый протокол.
+- ❌ Только в одну сторону, лимит соединений на домен (в HTTP/1.1), нет бинарных данных.
+- Когда: лента событий, нотификации, прогресс задачи, стриминг ответа LLM.
+
+### WebSocket
+Полнодуплексный канал **клиент ↔ сервер** поверх отдельного протокола (\`ws://\`).
+- ✅ Двусторонний, низкая задержка, бинарные данные.
+- ❌ Не «бесплатный» HTTP — нужен отдельный инфра-слой, ручной reconnect, heartbeat, масштабирование сложнее.
+- Когда: чаты, совместное редактирование, игры, всё интерактивное «туда-обратно».
+
+| | Polling | SSE | WebSocket |
+|---|---|---|---|
+| Направление | клиент→сервер | сервер→клиент | оба |
+| Reconnect | вручную | авто | вручную |
+| Протокол | HTTP | HTTP | WS |
+| Сложность инфры | низкая | низкая | высокая |
+
+### Что нужно в любом случае
+- **Reconnection с backoff** — соединения рвутся всегда.
+- **Heartbeat / ping-pong** — обнаружить «мёртвое» соединение.
+- **Буфер на время разрыва** — что показать и как догнать пропущенное (по \`lastEventId\`).
+- **Backpressure** — что делать, если событий больше, чем UI успевает рисовать (батчинг, throttle).
+        `),
+        examples: [
+          {
+            title: "Симуляция: polling vs SSE-поток",
+            description: "Слева опрос раз в 2с (видна задержка), справа — мгновенный поток событий",
+            code: r(`
+import { useState, useEffect } from "react";
+
+export default function App() {
+  const [serverValue, setServerValue] = useState(0);
+  const [polled, setPolled] = useState(0);
+  const [streamed, setStreamed] = useState([]);
+
+  // «сервер» меняет значение каждые 600мс
+  useEffect(() => {
+    const id = setInterval(() => setServerValue((v) => v + 1), 600);
+    return () => clearInterval(id);
+  }, []);
+
+  // polling — раз в 2с
+  useEffect(() => {
+    const id = setInterval(() => setPolled(serverValue), 2000);
+    return () => clearInterval(id);
+  }, [serverValue]);
+
+  // SSE-поток — реагирует сразу
+  useEffect(() => {
+    setStreamed((s) => [...s.slice(-5), serverValue]);
+  }, [serverValue]);
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif", display: "flex", gap: 16 }}>
+      <div style={{ flex: 1, border: "1px solid #888", borderRadius: 10, padding: 14 }}>
+        <p style={{ fontWeight: 600 }}>🔄 Polling (2с)</p>
+        <div style={{ fontSize: 32 }}>{polled}</div>
+        <p style={{ fontSize: 12, color: "#888" }}>отстаёт от сервера</p>
+      </div>
+      <div style={{ flex: 1, border: "1px solid #22c55e", borderRadius: 10, padding: 14 }}>
+        <p style={{ fontWeight: 600 }}>⚡ SSE-поток</p>
+        <div style={{ fontSize: 32 }}>{serverValue}</div>
+        <p style={{ fontSize: 12, color: "#888" }}>история: {streamed.join(", ")}</p>
+      </div>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "client-storage",
+        title: "Клиентское хранилище и оффлайн",
+        description: "localStorage, IndexedDB, Cache API, Service Worker, PWA",
+        theory: r(`
+У браузера несколько хранилищ — с разными гарантиями, лимитами и API.
+
+### localStorage / sessionStorage
+- Синхронные, строки, ~5–10 МБ. \`session\` живёт до закрытия вкладки.
+- ✅ Простые: настройки темы, флаги онбординга, черновики.
+- ❌ Синхронность блокирует поток, нет структурированных данных, не доступны в Worker.
+- 🔔 Событие \`storage\` — синхронизация между вкладками одного origin.
+
+### IndexedDB
+Асинхронная транзакционная NoSQL-БД в браузере. Сотни МБ+, объекты, индексы, доступна в Worker/Service Worker.
+- Сырой API неудобен — берут обёртки: \`idb\`, \`dexie\`.
+- Когда: оффлайн-данные, кеш сущностей, большие объёмы.
+
+### Cache API
+Хранилище пар \`Request → Response\`. Основа оффлайн-стратегий Service Worker.
+
+### Service Worker
+Прокси между приложением и сетью, живёт отдельно от страницы. Перехватывает \`fetch\` и решает: из кеша, из сети, или гибрид.
+Стратегии:
+- **Cache First** — статика (хешированные ассеты).
+- **Network First** — свежие данные с фолбэком на кеш.
+- **Stale-While-Revalidate** — кеш сразу + обновление в фоне.
+
+### PWA
+Service Worker + Web App Manifest = установка на устройство, оффлайн, push-уведомления.
+
+### Что важно
+- **Квоты и вытеснение** — браузер может очистить хранилище под давлением. Критичное — \`navigator.storage.persist()\`.
+- **Версионирование** — структура данных меняется; нужны миграции (особенно в IndexedDB).
+- **Безопасность** — никаких токенов/секретов в localStorage (доступны любому XSS). Сессии — в httpOnly-cookie.
+- **Шифрование** — чувствительное оффлайн-данное шифруй (Web Crypto API).
+        `),
+        examples: [
+          {
+            title: "Черновик с автосохранением и синхронизацией вкладок",
+            description: "Текст сохраняется в localStorage; открой пример в двух вкладках — увидишь синхронизацию",
+            code: r(`
+import { useState, useEffect } from "react";
+
+const KEY = "demo-draft";
+
+export default function App() {
+  const [text, setText] = useState(() => localStorage.getItem(KEY) ?? "");
+  const [saved, setSaved] = useState(true);
+
+  // автосохранение с дебаунсом
+  useEffect(() => {
+    setSaved(false);
+    const id = setTimeout(() => {
+      localStorage.setItem(KEY, text);
+      setSaved(true);
+    }, 500);
+    return () => clearTimeout(id);
+  }, [text]);
+
+  // синхронизация между вкладками
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === KEY && e.newValue !== null) setText(e.newValue);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Печатай — сохранится в localStorage..."
+        style={{ width: "100%", height: 90, padding: 10, borderRadius: 8,
+          border: "1px solid #888", fontFamily: "inherit", resize: "vertical" }}
+      />
+      <p style={{ fontSize: 13, color: saved ? "#22c55e" : "#f59e0b" }}>
+        {saved ? "✅ Сохранено" : "✏️ Сохраняю..."}
+      </p>
+      <p style={{ fontSize: 12, color: "#888" }}>
+        Перезагрузи превью — текст останется. Событие <code>storage</code> синхронит вкладки.
+      </p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "component-architecture",
+        title: "Архитектура компонентов",
+        description: "Композиция, compound components, headless UI, дизайн-токены",
+        theory: r(`
+Когда компонентов становятся сотни, важна не «фича работает», а **как она устроена** — иначе каждое изменение ломает соседнее.
+
+### Композиция вместо конфигурации
+Антипаттерн — «компонент-комбайн» с 30 пропсами (\`showHeader\`, \`headerColor\`, \`headerIcon\`...). Лучше — собирать из мелких частей через \`children\`:
+
+\`\`\`jsx
+// ❌ конфигурация
+<Card title="..." footer="..." headerAction={...} />
+// ✅ композиция
+<Card>
+  <Card.Header>...</Card.Header>
+  <Card.Body>...</Card.Body>
+</Card>
+\`\`\`
+
+### Compound Components
+Группа компонентов, разделяющих неявное состояние через Context. Пользователь свободно расставляет части, состояние «общее». Так устроены \`<Tabs>\`, \`<Accordion>\`, \`<Select>\` в Radix / Headless UI.
+
+### Headless UI
+Библиотека даёт **логику и поведение** (состояние, доступность, клавиатура, фокус-менеджмент), но **не даёт стилей**. Ты приносишь свою вёрстку. Radix UI, React Aria, Headless UI, TanStack Table — всё headless. Плюс: дизайн полностью твой, a11y — не твоя забота.
+
+### Дизайн-токены
+Именованные переменные дизайна (\`--color-accent\`, \`--space-4\`, \`--radius-md\`) — единый источник правды между Figma и кодом. Темы = разные наборы значений тех же токенов.
+
+### Где проходит граница компонента
+- **Презентационный** — только пропсы и разметка, без знания о данных.
+- **Контейнерный** — знает про данные/стор, не знает про вёрстку.
+- **Слои:** UI-kit → фичи → страницы. Зависимости — только вниз. Подход FSD (Feature-Sliced Design) формализует это.
+
+### Признаки плохой архитектуры
+prop drilling на 5 уровней, «бог-компонент» на 800 строк, дубли логики, неясно куда положить новый файл, изменение в одном месте ломает три других.
+        `),
+        examples: [
+          {
+            title: "Compound Component: Tabs через Context",
+            description: "Части Tabs общаются через контекст — разметку расставляешь как хочешь",
+            code: r(`
+import { useState, createContext, useContext } from "react";
+
+const TabsCtx = createContext(null);
+
+function Tabs({ children, defaultValue }) {
+  const [active, setActive] = useState(defaultValue);
+  return <TabsCtx.Provider value={{ active, setActive }}>{children}</TabsCtx.Provider>;
+}
+function TabList({ children }) {
+  return <div style={{ display: "flex", gap: 4, borderBottom: "1px solid #888" }}>{children}</div>;
+}
+function Tab({ value, children }) {
+  const { active, setActive } = useContext(TabsCtx);
+  const on = active === value;
+  return (
+    <button onClick={() => setActive(value)} style={{
+      padding: "8px 16px", border: "none", cursor: "pointer", position: "relative",
+      background: "transparent", color: on ? "#6366f1" : "#888", fontWeight: on ? 700 : 400,
+    }}>
+      {children}
+      {on && <motion.div layoutId="underline" style={{
+        position: "absolute", left: 0, right: 0, bottom: -1, height: 2, background: "#6366f1",
+      }} />}
+    </button>
+  );
+}
+function TabPanel({ value, children }) {
+  const { active } = useContext(TabsCtx);
+  if (active !== value) return null;
+  return <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+    style={{ padding: 16 }}>{children}</motion.div>;
+}
+
+export default function App() {
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <Tabs defaultValue="a">
+        <TabList>
+          <Tab value="a">Обзор</Tab>
+          <Tab value="b">Спецификация</Tab>
+          <Tab value="c">Отзывы</Tab>
+        </TabList>
+        <TabPanel value="a">📦 Общая информация о продукте.</TabPanel>
+        <TabPanel value="b">📐 Технические характеристики.</TabPanel>
+        <TabPanel value="c">⭐ Что говорят пользователи.</TabPanel>
+      </Tabs>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "frontend-security",
+        title: "Безопасность фронтенда",
+        description: "XSS, CSP, CSRF, хранение токенов, dangerouslySetInnerHTML",
+        theory: r(`
+Фронтенд — это код, выполняющийся **на чужой машине в чужом браузере**. Доверять нельзя ничему, что пришло снаружи.
+
+### XSS (Cross-Site Scripting)
+Злоумышленник внедряет свой JS в твою страницу — и он выполняется с правами пользователя (читает токены, шлёт запросы от его имени).
+- **React защищает по умолчанию**: всё в \`{}\` экранируется.
+- **Дыра №1** — \`dangerouslySetInnerHTML\`. Если уж надо рендерить HTML — прогоняй через санитайзер (\`DOMPurify\`).
+- **Дыра №2** — \`href={userInput}\` с \`javascript:...\`, \`<a target="_blank">\` без \`rel="noopener"\`.
+- Не доверяй данным из URL, localStorage, ответов API — это всё «снаружи».
+
+### CSP — Content Security Policy
+HTTP-заголовок, который говорит браузеру «исполняй скрипты только с этих источников». Даже если XSS-инъекция прошла — браузер не выполнит чужой скрипт. Лучшая «вторая линия обороны».
+
+### CSRF (Cross-Site Request Forgery)
+Чужой сайт заставляет браузер пользователя отправить запрос на твой API (куки прикрепятся автоматически).
+- Защита: \`SameSite=Strict/Lax\` на куках, CSRF-токены, проверка \`Origin\`.
+
+### Хранение токенов
+- **localStorage** — доступен любому JS → любой XSS крадёт токен. ❌ для access-токенов.
+- **httpOnly cookie** — JS не может прочитать. ✅ но уязвима к CSRF (→ \`SameSite\`).
+- Практика: access-токен — короткоживущий в памяти, refresh — в httpOnly-cookie.
+
+### Прочее
+- **Зависимости** — \`npm audit\`, обновления; одна скомпрометированная либа = доступ ко всему.
+- **Секреты** — в бандле фронтенда **нет приватных ключей**. Всё, что в JS, видно пользователю.
+- **CORS** — это защита **сервера**, не клиента; не «безопасность фронта», а правило, кому отвечать.
+- **Clickjacking** — \`X-Frame-Options\` / \`frame-ancestors\`, чтобы тебя не встроили в \`<iframe>\`.
+        `),
+        examples: [
+          {
+            title: "XSS: почему нельзя рендерить сырой HTML",
+            description: "Введи <img src=x onerror=...> — увидишь разницу между экранированием и dangerouslySetInnerHTML",
+            code: r(`
+import { useState } from "react";
+
+// наивный «санитайзер» — в проде используй DOMPurify
+function sanitize(html) {
+  return html
+    .replace(/<script[\\s\\S]*?<\\/script>/gi, "")
+    .replace(/ on\\w+="[^"]*"/gi, "")
+    .replace(/ on\\w+='[^']*'/gi, "")
+    .replace(/javascript:/gi, "");
+}
+
+export default function App() {
+  const [input, setInput] = useState('<img src=x onerror="alert(1)"> <b>жирный</b>');
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <input value={input} onChange={(e) => setInput(e.target.value)}
+        style={{ width: "100%", padding: 8, borderRadius: 6, border: "1px solid #888" }} />
+
+      <div style={{ marginTop: 14 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: "#22c55e" }}>
+          ✅ React по умолчанию (экранирует — безопасно):
+        </p>
+        <div style={{ padding: 10, border: "1px solid #22c55e", borderRadius: 6 }}>{input}</div>
+      </div>
+
+      <div style={{ marginTop: 14 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: "#f59e0b" }}>
+          ⚠️ dangerouslySetInnerHTML + санитайзер:
+        </p>
+        <div style={{ padding: 10, border: "1px solid #f59e0b", borderRadius: 6 }}
+          dangerouslySetInnerHTML={{ __html: sanitize(input) }} />
+      </div>
+
+      <p style={{ fontSize: 12, color: "#ef4444", marginTop: 10 }}>
+        Без санитайзера onerror-обработчик из строки выполнился бы как код.
+      </p>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "leetcode",
+    emoji: "🧩",
+    title: "Алгоритмы для LeetCode",
+    description: "Ключевые паттерны собеседований с пошаговой анимацией работы",
+    topics: [
+      {
+        id: "sorting-viz",
+        title: "Сортировки: визуализация",
+        description: "Bubble, Selection, Insertion — как они переставляют элементы",
+        theory: r(`
+Сортировка — фундамент: на ней строятся бинарный поиск, два указателя, многие жадные алгоритмы. На собеседовании важно не «написать quicksort по памяти», а **понимать trade-off'ы**.
+
+### Простые сортировки — O(n²)
+- **Bubble sort** — соседи сравниваются и «всплывают». Медленная, но если за проход не было обменов — массив уже отсортирован (адаптивность).
+- **Selection sort** — каждый проход находит минимум и ставит на место. Всегда O(n²), минимум обменов.
+- **Insertion sort** — берём элемент и «вставляем» в уже отсортированную часть. **Быстрая на почти отсортированных данных** (O(n) в лучшем случае), стабильная, работает inline — поэтому V8 использует её для коротких подмассивов внутри Timsort.
+
+### Быстрые сортировки — O(n log n)
+- **Merge sort** — divide & conquer, стабильная, гарантированные O(n log n), но O(n) доп. памяти.
+- **Quick sort** — divide & conquer вокруг pivot, in-place, в среднем быстрее merge, но худший случай O(n²) при плохом pivot.
+- **Heap sort** — через кучу, in-place, O(n log n) гарантированно, нестабильная.
+
+### Что спрашивают
+- **Стабильность** — сохраняется ли порядок равных элементов. Важно при сортировке по нескольким ключам.
+- \`Array.prototype.sort\` в V8 — **Timsort** (гибрид merge + insertion), стабильный с ES2019.
+- Без компаратора \`sort()\` сравнивает как **строки**: \`[10, 2, 1].sort()\` → \`[1, 10, 2]\`.
+
+### Задачи LeetCode
+912 Sort an Array · 75 Sort Colors (Dutch flag) · 88 Merge Sorted Array · 148 Sort List · 215 Kth Largest Element
+        `),
+        examples: [
+          {
+            title: "Визуализатор: Bubble / Selection / Insertion",
+            description: "Выбери алгоритм и запусти — жёлтый = сравнение, красный = обмен, зелёный = на месте",
+            code: r(`
+import { useState, useEffect, useRef } from "react";
+
+function genSteps(input, algo) {
+  const a = [...input];
+  const n = a.length;
+  const steps = [];
+  const sorted = [];
+  const snap = (compare, swap) => steps.push({ arr: [...a], compare, swap, sorted: [...sorted] });
+
+  if (algo === "bubble") {
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n - i - 1; j++) {
+        snap([j, j + 1], []);
+        if (a[j] > a[j + 1]) {
+          [a[j], a[j + 1]] = [a[j + 1], a[j]];
+          snap([], [j, j + 1]);
+        }
+      }
+      sorted.push(n - i - 1);
+    }
+  } else if (algo === "selection") {
+    for (let i = 0; i < n; i++) {
+      let min = i;
+      for (let j = i + 1; j < n; j++) {
+        snap([min, j], []);
+        if (a[j] < a[min]) min = j;
+      }
+      if (min !== i) { [a[i], a[min]] = [a[min], a[i]]; snap([], [i, min]); }
+      sorted.push(i);
+    }
+  } else {
+    sorted.push(0);
+    for (let i = 1; i < n; i++) {
+      let j = i;
+      while (j > 0) {
+        snap([j - 1, j], []);
+        if (a[j - 1] > a[j]) {
+          [a[j - 1], a[j]] = [a[j], a[j - 1]];
+          snap([], [j - 1, j]);
+          j--;
+        } else break;
+      }
+      sorted.push(i);
+    }
+  }
+  snap([], []);
+  return steps;
+}
+
+const START = [34, 12, 78, 23, 9, 56, 41, 5, 67, 28];
+
+export default function App() {
+  const [algo, setAlgo] = useState("bubble");
+  const [steps, setSteps] = useState(() => genSteps(START, "bubble"));
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(120);
+  const timer = useRef(null);
+
+  const reset = (nextAlgo) => {
+    const newAlgo = nextAlgo || algo;
+    setAlgo(newAlgo);
+    setSteps(genSteps(START, newAlgo));
+    setI(0);
+    setPlaying(false);
+  };
+
+  useEffect(() => {
+    if (!playing) return;
+    timer.current = setInterval(() => {
+      setI((prev) => {
+        if (prev >= steps.length - 1) { setPlaying(false); return prev; }
+        return prev + 1;
+      });
+    }, speed);
+    return () => clearInterval(timer.current);
+  }, [playing, speed, steps]);
+
+  const step = steps[i];
+  const max = Math.max(...START);
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+        {["bubble", "selection", "insertion"].map((k) => (
+          <button key={k} onClick={() => reset(k)} style={{
+            padding: "5px 12px", borderRadius: 8, cursor: "pointer", border: "1px solid #888",
+            background: algo === k ? "#6366f1" : "transparent", color: algo === k ? "white" : "inherit",
+          }}>{k}</button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 150, marginBottom: 10 }}>
+        {step.arr.map((v, idx) => {
+          let bg = "#6366f1";
+          if (step.sorted.includes(idx)) bg = "#22c55e";
+          if (step.compare.includes(idx)) bg = "#eab308";
+          if (step.swap.includes(idx)) bg = "#ef4444";
+          return (
+            <motion.div key={idx} layout
+              animate={{ height: (v / max) * 140 + 10, backgroundColor: bg }}
+              transition={{ duration: 0.15 }}
+              style={{ flex: 1, borderRadius: "4px 4px 0 0", display: "flex",
+                alignItems: "flex-start", justifyContent: "center", color: "white",
+                fontSize: 10, paddingTop: 2 }}
+            >{v}</motion.div>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <button onClick={() => setPlaying((p) => !p)} disabled={i >= steps.length - 1}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>
+          {playing ? "⏸ Пауза" : "▶ Старт"}
+        </button>
+        <button onClick={() => reset()} style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>↺ Сброс</button>
+        <input type="range" min={20} max={400} value={speed}
+          onChange={(e) => setSpeed(+e.target.value)} style={{ flex: 1 }} />
+        <span style={{ fontSize: 12, color: "#888" }}>шаг {i}/{steps.length - 1}</span>
+      </div>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "binary-search-patterns",
+        title: "Бинарный поиск: шаблоны",
+        description: "Классика, граница (lower/upper bound), поиск по ответу",
+        theory: r(`
+Бинарный поиск — это не «найти число в массиве». Это **отсечение половины пространства решений за шаг**. O(log n).
+
+### Условие применимости
+Должна существовать **монотонность**: если ответ «да» для x, то и для всех x' по одну сторону. Тогда ищем границу перехода «нет → да».
+
+### Три шаблона
+
+**1. Классический — найти точное значение**
+\`\`\`js
+let lo = 0, hi = n - 1;
+while (lo <= hi) {
+  const mid = (lo + hi) >> 1;
+  if (a[mid] === target) return mid;
+  if (a[mid] < target) lo = mid + 1;
+  else hi = mid - 1;
+}
+return -1;
+\`\`\`
+
+**2. Граница (lower bound) — первый элемент >= target**
+\`\`\`js
+let lo = 0, hi = n;          // hi = n, не n-1
+while (lo < hi) {
+  const mid = (lo + hi) >> 1;
+  if (a[mid] < target) lo = mid + 1;
+  else hi = mid;             // mid может быть ответом
+}
+return lo;
+\`\`\`
+
+**3. Поиск по ответу** — пространство = не массив, а диапазон возможных ответов. Есть монотонная функция-предикат \`canDo(x)\` → бинарим по x. Так решаются «минимальная скорость», «минимальный размер», «дни/Коко ест бананы».
+
+### Грабли
+- **Зацикливание**: при \`lo < hi\` нельзя писать \`hi = mid - 1\` если mid может быть ответом; при \`lo <= hi\` обязательно сдвигать обе границы.
+- **Переполнение** \`(lo + hi)\` — в JS неактуально, но привычка: \`lo + ((hi - lo) >> 1)\`.
+- Какой инвариант у границ — держи в голове постоянно: что значит \`lo\`, что значит \`hi\`.
+
+### Задачи LeetCode
+704 Binary Search · 35 Search Insert Position · 34 First and Last Position · 33 Search in Rotated Array · 153 Min in Rotated Array · 875 Koko Eating Bananas · 162 Find Peak Element
+        `),
+        examples: [
+          {
+            title: "Бинарный поиск шаг за шагом",
+            description: "lo/hi сужают зону, mid — текущая проверка; зелёный — найдено",
+            code: r(`
+import { useState, useEffect, useRef } from "react";
+
+const ARR = [3, 8, 12, 16, 23, 38, 56, 72, 91, 100, 113, 128];
+
+function genSteps(arr, target) {
+  const steps = [];
+  let lo = 0, hi = arr.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    steps.push({ lo, hi, mid, found: arr[mid] === target });
+    if (arr[mid] === target) break;
+    if (arr[mid] < target) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  if (!steps.length || !steps[steps.length - 1].found) {
+    steps.push({ lo: -1, hi: -1, mid: -1, found: false, done: true });
+  }
+  return steps;
+}
+
+export default function App() {
+  const [target, setTarget] = useState(72);
+  const [steps, setSteps] = useState(() => genSteps(ARR, 72));
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const timer = useRef(null);
+
+  const reset = (t) => {
+    const tt = t === undefined ? target : t;
+    setTarget(tt);
+    setSteps(genSteps(ARR, tt));
+    setI(0);
+    setPlaying(false);
+  };
+
+  useEffect(() => {
+    if (!playing) return;
+    timer.current = setInterval(() => {
+      setI((p) => { if (p >= steps.length - 1) { setPlaying(false); return p; } return p + 1; });
+    }, 700);
+    return () => clearInterval(timer.current);
+  }, [playing, steps]);
+
+  const s = steps[i];
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <div style={{ marginBottom: 12, fontSize: 13 }}>
+        target:
+        {[16, 72, 113, 50].map((t) => (
+          <button key={t} onClick={() => reset(t)} style={{
+            margin: "0 4px", padding: "3px 9px", borderRadius: 6, cursor: "pointer",
+            border: "1px solid #888", background: target === t ? "#6366f1" : "transparent",
+            color: target === t ? "white" : "inherit",
+          }}>{t}</button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+        {ARR.map((v, idx) => {
+          const inRange = s.lo <= idx && idx <= s.hi;
+          let bg = inRange ? "#1e293b" : "#0f172a";
+          let border = "1px solid #334155";
+          if (idx === s.mid) { bg = s.found ? "#22c55e" : "#eab308"; border = "1px solid white"; }
+          return (
+            <motion.div key={idx} animate={{ backgroundColor: bg }} style={{
+              flex: 1, height: 44, border, borderRadius: 6, display: "flex",
+              flexDirection: "column", alignItems: "center", justifyContent: "center",
+              color: "white", fontSize: 12,
+            }}>
+              {v}
+              <span style={{ fontSize: 9, color: "#94a3b8" }}>
+                {idx === s.lo ? "lo" : ""}{idx === s.hi ? (idx === s.lo ? "/hi" : "hi") : ""}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <button onClick={() => setPlaying((p) => !p)} disabled={i >= steps.length - 1}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>
+          {playing ? "⏸" : "▶"}
+        </button>
+        <button onClick={() => reset()} style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>↺</button>
+        <span style={{ fontSize: 13, color: "#888" }}>
+          {s.done ? "не найдено" : s.found ? "✅ найдено на индексе " + s.mid : "проверяем mid = " + s.mid}
+        </span>
+      </div>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "two-pointers",
+        title: "Два указателя",
+        description: "Встречное движение, быстрый/медленный, разделение",
+        theory: r(`
+Паттерн «два указателя» заменяет вложенный цикл O(n²) на один проход O(n) за счёт того, что указатели **движутся навстречу или с разной скоростью**, не возвращаясь назад.
+
+### Виды
+
+**1. Встречное движение (opposite ends)** — на **отсортированном** массиве. \`left\` с начала, \`right\` с конца, двигаем тот, который приближает к ответу.
+- Two Sum II, Valid Palindrome, Container With Most Water, 3Sum (фиксируем один + два указателя).
+
+**2. Быстрый и медленный (fast & slow)** — разная скорость. Поиск цикла (Флойд), середина списка, n-й с конца.
+- Linked List Cycle, Middle of Linked List, Happy Number.
+
+**3. Разделение (partition)** — один указатель пишет, другой читает. Удаление дубликатов inline, перемещение нулей, Dutch flag.
+- Remove Duplicates, Move Zeroes, Sort Colors.
+
+### Почему это работает (встречное движение)
+На отсортированном массиве: если \`a[left] + a[right] > target\`, то и любая пара с этим \`right\` и большим \`left\` тоже больше — значит \`right\` можно безопасно сдвинуть влево, **не теряя решений**. Это инвариант, который надо уметь проговорить на собесе.
+
+### Грабли
+- Указатели должны двигаться **монотонно** — иначе не O(n).
+- Не перепутать условие остановки: \`left < right\` vs \`left <= right\`.
+- Для встречного движения массив **обязан быть отсортирован**.
+
+### Задачи LeetCode
+167 Two Sum II · 125 Valid Palindrome · 11 Container With Most Water · 15 3Sum · 26 Remove Duplicates · 283 Move Zeroes · 75 Sort Colors
+        `),
+        examples: [
+          {
+            title: "Two Sum на отсортированном массиве",
+            description: "left/right сходятся: сумма больше target — двигаем right, меньше — left",
+            code: r(`
+import { useState, useEffect, useRef } from "react";
+
+const ARR = [2, 5, 8, 12, 17, 21, 26, 30, 38, 45];
+
+function genSteps(arr, target) {
+  const steps = [];
+  let l = 0, r = arr.length - 1;
+  while (l < r) {
+    const sum = arr[l] + arr[r];
+    steps.push({ l, r, sum, found: sum === target });
+    if (sum === target) break;
+    if (sum < target) l++;
+    else r--;
+  }
+  return steps;
+}
+
+export default function App() {
+  const [target, setTarget] = useState(43);
+  const [steps, setSteps] = useState(() => genSteps(ARR, 43));
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const timer = useRef(null);
+
+  const reset = (t) => {
+    const tt = t === undefined ? target : t;
+    setTarget(tt); setSteps(genSteps(ARR, tt)); setI(0); setPlaying(false);
+  };
+
+  useEffect(() => {
+    if (!playing) return;
+    timer.current = setInterval(() => {
+      setI((p) => { if (p >= steps.length - 1) { setPlaying(false); return p; } return p + 1; });
+    }, 800);
+    return () => clearInterval(timer.current);
+  }, [playing, steps]);
+
+  const s = steps[i];
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <div style={{ marginBottom: 12, fontSize: 13 }}>
+        target:
+        {[43, 14, 50, 7].map((t) => (
+          <button key={t} onClick={() => reset(t)} style={{
+            margin: "0 4px", padding: "3px 9px", borderRadius: 6, cursor: "pointer",
+            border: "1px solid #888", background: target === t ? "#6366f1" : "transparent",
+            color: target === t ? "white" : "inherit",
+          }}>{t}</button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+        {ARR.map((v, idx) => {
+          const isL = idx === s.l, isR = idx === s.r;
+          let bg = "#1e293b";
+          if (isL || isR) bg = s.found ? "#22c55e" : "#6366f1";
+          return (
+            <motion.div key={idx} animate={{ backgroundColor: bg, scale: isL || isR ? 1.1 : 1 }}
+              style={{ flex: 1, height: 46, borderRadius: 6, display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center", color: "white", fontSize: 13,
+                border: "1px solid #334155" }}>
+              {v}
+              <span style={{ fontSize: 9, color: "#fbbf24" }}>
+                {isL ? "L" : ""}{isR ? "R" : ""}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <p style={{ fontSize: 13, color: "#888", minHeight: 20 }}>
+        {s ? (s.found
+          ? "✅ " + ARR[s.l] + " + " + ARR[s.r] + " = " + target
+          : ARR[s.l] + " + " + ARR[s.r] + " = " + s.sum + (s.sum < target ? " < target → L++" : " > target → R--"))
+          : ""}
+      </p>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setPlaying((p) => !p)} disabled={i >= steps.length - 1}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>
+          {playing ? "⏸" : "▶"}
+        </button>
+        <button onClick={() => reset()} style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>↺</button>
+      </div>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "sliding-window",
+        title: "Скользящее окно",
+        description: "Подмассивы и подстроки за один проход",
+        theory: r(`
+Скользящее окно — частный случай двух указателей для задач про **непрерывный подотрезок** (подмассив / подстрока). Вместо пересчёта каждого окна с нуля — **инкрементально** обновляем при сдвиге границы.
+
+### Окно фиксированного размера
+«Максимальная сумма подмассива длины k». Считаем сумму первого окна, дальше: \`+ новый элемент справа, − выпавший слева\`. O(n) вместо O(n·k).
+
+### Окно переменного размера
+«Самая длинная подстрока без повторов», «минимальный подмассив с суммой ≥ target». Скелет:
+\`\`\`js
+let left = 0;
+for (let right = 0; right < n; right++) {
+  add(a[right]);                    // расширяем окно вправо
+  while (/* окно нарушает условие */) {
+    remove(a[left]); left++;        // сжимаем слева
+  }
+  best = Math.max(best, right - left + 1);
+}
+\`\`\`
+
+Ключевая идея: **right всегда движется вперёд, left тоже только вперёд** → каждый элемент входит и выходит из окна максимум один раз → O(n), хотя есть вложенный \`while\`.
+
+### Что держать в окне
+Часто недостаточно одного числа — нужна структура:
+- \`Map\`/\`Set\` — для «без повторов», для подсчёта символов.
+- Счётчик «сколько условий выполнено» — для «минимальное окно, содержащее все символы T».
+- Дек — для «максимум в окне» (monotonic deque).
+
+### Грабли
+- Не забыть **сжимать** окно — иначе это не окно, а просто префикс.
+- Когда обновлять ответ — до или после сжатия (зависит от того, ищешь max или min).
+- Окно переменного размера ≠ «два вложенных цикла»: left не сбрасывается.
+
+### Задачи LeetCode
+3 Longest Substring Without Repeating · 76 Minimum Window Substring · 209 Minimum Size Subarray Sum · 424 Longest Repeating Char Replacement · 239 Sliding Window Maximum · 567 Permutation in String
+        `),
+        examples: [
+          {
+            title: "Максимальная сумма окна длины k",
+            description: "Окно скользит: справа входит элемент, слева выходит — сумма пересчитывается за O(1)",
+            code: r(`
+import { useState, useEffect, useRef } from "react";
+
+const ARR = [4, 2, 9, 7, 1, 8, 3, 6, 5, 2, 10, 4];
+const K = 4;
+
+function genSteps(arr, k) {
+  const steps = [];
+  let sum = 0;
+  for (let i = 0; i < k; i++) sum += arr[i];
+  let best = sum, bestStart = 0;
+  steps.push({ start: 0, sum, best, bestStart });
+  for (let i = k; i < arr.length; i++) {
+    sum += arr[i] - arr[i - k];
+    if (sum > best) { best = sum; bestStart = i - k + 1; }
+    steps.push({ start: i - k + 1, sum, best, bestStart });
+  }
+  return steps;
+}
+
+export default function App() {
+  const steps = useRef(genSteps(ARR, K)).current;
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const timer = useRef(null);
+
+  useEffect(() => {
+    if (!playing) return;
+    timer.current = setInterval(() => {
+      setI((p) => { if (p >= steps.length - 1) { setPlaying(false); return p; } return p + 1; });
+    }, 700);
+    return () => clearInterval(timer.current);
+  }, [playing]);
+
+  const s = steps[i];
+  const max = Math.max(...ARR);
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 130, marginBottom: 10 }}>
+        {ARR.map((v, idx) => {
+          const inWindow = idx >= s.start && idx < s.start + K;
+          const inBest = idx >= s.bestStart && idx < s.bestStart + K;
+          let bg = "#1e293b";
+          if (inBest) bg = "#22c55e";
+          if (inWindow) bg = "#6366f1";
+          return (
+            <motion.div key={idx} animate={{ backgroundColor: bg, height: (v / max) * 110 + 16 }}
+              style={{ flex: 1, borderRadius: 5, display: "flex", alignItems: "flex-end",
+                justifyContent: "center", color: "white", fontSize: 11, paddingBottom: 2 }}>
+              {v}
+            </motion.div>
+          );
+        })}
+      </div>
+      <p style={{ fontSize: 13, color: "#888" }}>
+        Окно [{s.start}..{s.start + K - 1}] · сумма = <b style={{ color: "#a5b4fc" }}>{s.sum}</b> ·
+        лучшая = <b style={{ color: "#4ade80" }}>{s.best}</b>
+      </p>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setPlaying((p) => !p)} disabled={i >= steps.length - 1}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>{playing ? "⏸" : "▶"}</button>
+        <button onClick={() => { setI(0); setPlaying(false); }}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>↺</button>
+        <span style={{ fontSize: 12, color: "#888", alignSelf: "center" }}>шаг {i}/{steps.length - 1}</span>
+      </div>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "bfs-dfs-grid",
+        title: "BFS и DFS по сетке",
+        description: "Обход графа, кратчайший путь, заливка, острова",
+        theory: r(`
+Сетка (2D-матрица) — это граф, где у каждой клетки 4 (или 8) соседей. Большинство «grid»-задач на LeetCode решаются BFS или DFS.
+
+### BFS — поиск в ширину
+Очередь (FIFO). Обходит **по слоям**: сначала все соседи на расстоянии 1, потом 2, и т.д.
+- ✅ Находит **кратчайший путь** в невзвешенном графе.
+- Используй для: shortest path, «за сколько шагов», multi-source (поджечь все апельсины одновременно).
+
+\`\`\`js
+const queue = [[start]];
+const seen = new Set([key(start)]);
+while (queue.length) {
+  const cur = queue.shift();
+  for (const next of neighbors(cur)) {
+    if (seen.has(key(next))) continue;
+    seen.add(key(next));
+    queue.push(next);
+  }
+}
+\`\`\`
+
+### DFS — поиск в глубину
+Стек / рекурсия. Идёт «вглубь до упора», потом откатывается.
+- ✅ Проще пишется рекурсивно, естественен для «посчитать компоненту», заливки, backtracking.
+- ❌ **Не даёт** кратчайший путь. На больших сетках рекурсия может переполнить стек.
+- Используй для: число островов, площадь региона, flood fill.
+
+### Общие приёмы
+- **Помечай посещённое сразу** при добавлении в очередь/при входе — иначе клетка попадёт несколько раз.
+- Можно метить прямо в матрице (\`grid[r][c] = '0'\`), если разрешено мутировать — экономит память на \`seen\`.
+- **Multi-source BFS** — кладём в очередь сразу все стартовые клетки (Rotting Oranges, 01 Matrix).
+- Направления: \`[[1,0],[-1,0],[0,1],[0,-1]]\` — выноси в константу.
+
+### Грабли
+- \`queue.shift()\` — это O(n)! На больших сетках держи указатель головы или используй деку.
+- Проверка границ \`0 <= r < rows && 0 <= c < cols\` — частый source of bugs.
+- BFS для кратчайшего пути работает только если **все рёбра равны**; иначе — Дейкстра / 0-1 BFS.
+
+### Задачи LeetCode
+200 Number of Islands · 994 Rotting Oranges · 1091 Shortest Path in Binary Matrix · 542 01 Matrix · 130 Surrounded Regions · 733 Flood Fill · 79 Word Search
+        `),
+        examples: [
+          {
+            title: "BFS: кратчайший путь в лабиринте",
+            description: "Волна расходится от старта (синий) слоями, потом подсвечивается кратчайший путь (зелёный)",
+            code: r(`
+import { useState, useEffect, useRef } from "react";
+
+const GRID = [
+  [0,0,0,0,0,1,0,0],
+  [1,1,0,1,0,1,0,1],
+  [0,0,0,1,0,0,0,0],
+  [0,1,1,1,1,1,1,0],
+  [0,0,0,0,0,0,1,0],
+  [1,1,1,1,0,1,1,0],
+  [0,0,0,0,0,0,0,0],
+];
+const ROWS = GRID.length, COLS = GRID[0].length;
+const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+
+function genSteps() {
+  const steps = [];
+  const seen = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+  const prev = {};
+  let queue = [[0, 0]];
+  seen[0][0] = true;
+  const order = [];
+  while (queue.length) {
+    const next = [];
+    for (const [r, c] of queue) {
+      order.push([r, c]);
+      for (const [dr, dc] of DIRS) {
+        const nr = r + dr, nc = c + dc;
+        if (nr < 0 || nc < 0 || nr >= ROWS || nc >= COLS) continue;
+        if (seen[nr][nc] || GRID[nr][nc] === 1) continue;
+        seen[nr][nc] = true;
+        prev[nr + "," + nc] = [r, c];
+        next.push([nr, nc]);
+      }
+    }
+    steps.push({ visited: [...order], path: null });
+    queue = next;
+  }
+  // восстановить путь
+  const path = [];
+  let cur = [ROWS - 1, COLS - 1];
+  if (prev[cur[0] + "," + cur[1]] || (cur[0] === 0 && cur[1] === 0)) {
+    while (cur) {
+      path.push(cur);
+      cur = prev[cur[0] + "," + cur[1]];
+    }
+  }
+  steps.push({ visited: [...order], path: path.reverse() });
+  return steps;
+}
+
+export default function App() {
+  const steps = useRef(genSteps()).current;
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const timer = useRef(null);
+
+  useEffect(() => {
+    if (!playing) return;
+    timer.current = setInterval(() => {
+      setI((p) => { if (p >= steps.length - 1) { setPlaying(false); return p; } return p + 1; });
+    }, 280);
+    return () => clearInterval(timer.current);
+  }, [playing]);
+
+  const s = steps[i];
+  const visitedSet = new Set(s.visited.map(([r, c]) => r + "," + c));
+  const pathSet = new Set((s.path || []).map(([r, c]) => r + "," + c));
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(" + COLS + ", 1fr)", gap: 3, marginBottom: 10 }}>
+        {GRID.map((row, r) => row.map((cell, c) => {
+          const key = r + "," + c;
+          let bg = "#1e293b";
+          if (cell === 1) bg = "#475569";
+          else if (pathSet.has(key)) bg = "#22c55e";
+          else if (visitedSet.has(key)) bg = "#6366f1";
+          if (r === 0 && c === 0) bg = pathSet.has(key) ? "#22c55e" : "#fbbf24";
+          if (r === ROWS - 1 && c === COLS - 1) bg = pathSet.has(key) ? "#22c55e" : "#f97316";
+          return (
+            <motion.div key={key} animate={{ backgroundColor: bg }}
+              style={{ aspectRatio: "1", borderRadius: 4 }} />
+          );
+        }))}
+      </div>
+      <p style={{ fontSize: 12, color: "#888" }}>
+        🟡 старт · 🟠 цель · 🟦 фронт BFS · 🟩 кратчайший путь · ⬛ стена
+      </p>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setPlaying((p) => !p)} disabled={i >= steps.length - 1}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>{playing ? "⏸" : "▶"}</button>
+        <button onClick={() => { setI(0); setPlaying(true); }}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>↺</button>
+        <span style={{ fontSize: 12, color: "#888", alignSelf: "center" }}>слой {i}/{steps.length - 1}</span>
+      </div>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "linked-list-patterns",
+        title: "Связные списки",
+        description: "Разворот, поиск цикла (Флойд), быстрый/медленный указатель",
+        theory: r(`
+Связный список на собесе — это проверка на аккуратную работу с указателями. Главный навык — **не потерять ссылку** при перестановке.
+
+### Разворот списка
+Классика. Три указателя: \`prev\`, \`cur\`, \`next\`. На каждом шаге запоминаем \`next\`, разворачиваем ссылку \`cur.next = prev\`, сдвигаем всё вперёд.
+\`\`\`js
+let prev = null, cur = head;
+while (cur) {
+  const next = cur.next;   // сохранить, иначе потеряем хвост
+  cur.next = prev;         // развернуть
+  prev = cur;              // сдвинуть
+  cur = next;
+}
+return prev;               // новая голова
+\`\`\`
+
+### Быстрый и медленный указатель
+\`slow\` идёт по 1 шагу, \`fast\` — по 2.
+- **Середина списка**: когда \`fast\` дошёл до конца, \`slow\` — посередине.
+- **Поиск цикла (Флойд)**: если есть цикл, \`fast\` рано или поздно «догонит» \`slow\` внутри петли. Если \`fast\` дошёл до \`null\` — цикла нет.
+- **Начало цикла**: после встречи переставляем один указатель в head и двигаем оба по 1 — встретятся в начале петли (математика модулярной арифметики).
+
+### n-й элемент с конца
+Два указателя с **разрывом в n шагов**: сначала \`fast\` уходит на n вперёд, потом оба идут вместе — когда \`fast\` упрётся в конец, \`slow\` на нужном элементе.
+
+### Приёмы
+- **Dummy node** (\`dummy.next = head\`) — избавляет от спецслучая «удаляем/вставляем в голову».
+- Рисуй на бумаге — 90% багов видно сразу.
+- Рекурсия для списков элегантна, но O(n) стека — на больших списках лучше итеративно.
+
+### Грабли
+- Потеря ссылки: переставил \`cur.next\` до того, как сохранил старый \`next\`.
+- Зацикливание: забыл обнулить \`.next\` у бывшего хвоста.
+- \`fast.next.next\` без проверки \`fast && fast.next\` → \`TypeError\`.
+
+### Задачи LeetCode
+206 Reverse Linked List · 141 Linked List Cycle · 142 Cycle II · 876 Middle of the List · 19 Remove Nth From End · 21 Merge Two Sorted · 234 Palindrome Linked List
+        `),
+        examples: [
+          {
+            title: "Разворот связного списка",
+            description: "prev / cur / next переставляют стрелки — список разворачивается на месте",
+            code: r(`
+import { useState, useEffect, useRef } from "react";
+
+const VALUES = [10, 20, 30, 40, 50];
+
+function genSteps() {
+  const steps = [];
+  // модель: массив узлов, links[i] = индекс следующего (или null)
+  const links = VALUES.map((_, i) => (i < VALUES.length - 1 ? i + 1 : null));
+  let prev = null, cur = 0;
+  steps.push({ links: [...links], prev, cur, next: links[cur] });
+  while (cur !== null) {
+    const next = links[cur];
+    links[cur] = prev;
+    prev = cur;
+    cur = next;
+    steps.push({ links: [...links], prev, cur, next: cur !== null ? links[cur] : null });
+  }
+  return steps;
+}
+
+export default function App() {
+  const steps = useRef(genSteps()).current;
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const timer = useRef(null);
+
+  useEffect(() => {
+    if (!playing) return;
+    timer.current = setInterval(() => {
+      setI((p) => { if (p >= steps.length - 1) { setPlaying(false); return p; } return p + 1; });
+    }, 900);
+    return () => clearInterval(timer.current);
+  }, [playing]);
+
+  const s = steps[i];
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+        {VALUES.map((v, idx) => {
+          let ring = "2px solid #334155";
+          if (idx === s.cur) ring = "2px solid #eab308";
+          else if (idx === s.prev) ring = "2px solid #22c55e";
+          return (
+            <div key={idx} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <motion.div animate={{ borderColor: ring.split(" ")[2] }} style={{
+                width: 44, height: 44, borderRadius: 10, border: ring, display: "flex",
+                flexDirection: "column", alignItems: "center", justifyContent: "center",
+                color: "white", fontSize: 13, background: "#1e293b",
+              }}>
+                {v}
+                <span style={{ fontSize: 8, color: "#fbbf24" }}>
+                  {idx === s.cur ? "cur" : ""}{idx === s.prev ? "prev" : ""}
+                </span>
+              </motion.div>
+              <span style={{ color: "#64748b", fontSize: 16 }}>
+                {s.links[idx] === null ? "⦰" : s.links[idx] < idx ? "←" : "→"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p style={{ fontSize: 13, color: "#888" }}>
+        {i === 0 ? "Старт: prev = null, cur = голова" :
+         i === steps.length - 1 ? "✅ Готово — prev стал новой головой" :
+         "Развернули стрелку cur → prev, сдвинули указатели"}
+      </p>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setPlaying((p) => !p)} disabled={i >= steps.length - 1}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>{playing ? "⏸" : "▶"}</button>
+        <button onClick={() => { setI(0); setPlaying(false); }}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>↺</button>
+      </div>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "dp-viz",
+        title: "Динамическое программирование",
+        description: "Мемоизация, таблица, перекрывающиеся подзадачи",
+        theory: r(`
+DP — это «рекурсия, которая не считает одно и то же дважды». Применима, когда задача обладает двумя свойствами:
+1. **Перекрывающиеся подзадачи** — одни и те же подзадачи встречаются много раз.
+2. **Оптимальная подструктура** — ответ задачи строится из ответов подзадач.
+
+### Два стиля
+- **Top-down (мемоизация)** — обычная рекурсия + кеш. Пишется быстрее, считает только нужные состояния.
+- **Bottom-up (табуляция)** — цикл, заполняем таблицу от базовых случаев. Нет накладных расходов на рекурсию, легко оптимизировать память.
+
+### Как придумать DP-решение
+1. **Состояние** — что описывает подзадачу? (\`dp[i]\` = ответ для префикса длины i)
+2. **Переход** — как \`dp[i]\` выражается через предыдущие?
+3. **База** — самые маленькие случаи.
+4. **Порядок** — в каком порядке заполнять, чтобы нужное уже было посчитано.
+5. **Ответ** — в какой ячейке итог.
+
+### Классы задач
+- **Линейные**: Climbing Stairs, House Robber, Fibonacci — \`dp[i]\` зависит от \`dp[i-1]\`, \`dp[i-2]\`.
+- **На сетке**: Unique Paths, Min Path Sum — \`dp[r][c]\` из \`dp[r-1][c]\` и \`dp[r][c-1]\`.
+- **Подпоследовательности**: LCS, LIS, Edit Distance — двумерная таблица по двум строкам.
+- **Knapsack**: Coin Change, Partition Equal Subset — состояние «предмет + остаток».
+
+### Оптимизация памяти
+Если \`dp[i]\` зависит только от \`dp[i-1]\` — не нужна вся таблица, хватит пары переменных (Fibonacci за O(1) памяти). На сетке часто хватает одной строки.
+
+### Грабли
+- Неправильно выбранное состояние → переход не выражается. Это 80% сложности DP.
+- Забыть базовый случай или границы таблицы.
+- Жадность вместо DP: «брать побольше» не всегда оптимально (Coin Change на монетах [1,3,4], сумма 6).
+
+### Задачи LeetCode
+70 Climbing Stairs · 198 House Robber · 322 Coin Change · 1143 LCS · 300 LIS · 62 Unique Paths · 64 Min Path Sum · 416 Partition Equal Subset Sum
+        `),
+        examples: [
+          {
+            title: "Unique Paths: заполнение DP-таблицы",
+            description: "Каждая клетка = сумма верхней и левой. Робот идёт из угла в угол только вправо/вниз",
+            code: r(`
+import { useState, useEffect, useRef } from "react";
+
+const ROWS = 5, COLS = 7;
+
+function genSteps() {
+  const steps = [];
+  const dp = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (r === 0 || c === 0) dp[r][c] = 1;
+      else dp[r][c] = dp[r - 1][c] + dp[r][c - 1];
+      steps.push({ dp: dp.map((row) => [...row]), cur: [r, c] });
+    }
+  }
+  return steps;
+}
+
+export default function App() {
+  const steps = useRef(genSteps()).current;
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const timer = useRef(null);
+
+  useEffect(() => {
+    if (!playing) return;
+    timer.current = setInterval(() => {
+      setI((p) => { if (p >= steps.length - 1) { setPlaying(false); return p; } return p + 1; });
+    }, 220);
+    return () => clearInterval(timer.current);
+  }, [playing]);
+
+  const s = steps[i];
+  const [cr, cc] = s.cur;
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(" + COLS + ", 1fr)", gap: 4, marginBottom: 10 }}>
+        {s.dp.map((row, r) => row.map((val, c) => {
+          const filled = r < cr || (r === cr && c <= cc);
+          const isCur = r === cr && c === cc;
+          const isSource = (r === cr - 1 && c === cc) || (r === cr && c === cc - 1);
+          let bg = "#0f172a";
+          if (filled) bg = "#1e293b";
+          if (isSource) bg = "#6366f1";
+          if (isCur) bg = "#eab308";
+          return (
+            <motion.div key={r + "-" + c} animate={{ backgroundColor: bg }}
+              style={{ aspectRatio: "1", borderRadius: 5, display: "grid", placeItems: "center",
+                color: "white", fontSize: 12, border: "1px solid #334155" }}>
+              {filled ? val : ""}
+            </motion.div>
+          );
+        }))}
+      </div>
+      <p style={{ fontSize: 13, color: "#888" }}>
+        dp[{cr}][{cc}] = верхняя + левая = <b style={{ color: "#fbbf24" }}>{s.dp[cr][cc]}</b>
+        {i === steps.length - 1 && "  →  всего путей: " + s.dp[ROWS - 1][COLS - 1]}
+      </p>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setPlaying((p) => !p)} disabled={i >= steps.length - 1}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>{playing ? "⏸" : "▶"}</button>
+        <button onClick={() => { setI(0); setPlaying(true); }}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>↺</button>
+      </div>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+      {
+        id: "backtracking",
+        title: "Бэктрекинг",
+        description: "Перебор с возвратом: подмножества, перестановки, N ферзей",
+        theory: r(`
+Бэктрекинг — систематический перебор всех вариантов: **делаем выбор → идём глубже → отменяем выбор (возврат) → пробуем следующий**. Это DFS по дереву решений.
+
+### Скелет
+\`\`\`js
+function backtrack(path, choices) {
+  if (/* path — готовое решение */) {
+    result.push([...path]);   // копию! path меняется дальше
+    return;
+  }
+  for (const choice of choices) {
+    if (!isValid(choice)) continue;   // отсечение (pruning)
+    path.push(choice);                // выбрали
+    backtrack(path, nextChoices);     // углубились
+    path.pop();                       // отменили — ВОЗВРАТ
+  }
+}
+\`\`\`
+
+### Три классических класса
+- **Подмножества** (Subsets, 2ⁿ штук) — для каждого элемента выбор «взять / не взять».
+- **Перестановки** (Permutations, n! штук) — на каждом уровне выбираем неиспользованный элемент.
+- **Комбинации / разбиения** (Combination Sum, Partition) — выбираем с ограничением.
+
+### Отсечения (pruning) — это главное
+Голый перебор экспоненциален. Бэктрекинг быстр там, где можно **рано отбросить ветку**:
+- N ферзей: не ставим ферзя на бьющуюся клетку → не спускаемся в заведомо мёртвую ветку.
+- Combination Sum: если текущая сумма уже > target → не продолжаем.
+- Сортировка входа + пропуск дубликатов → не генерируем одинаковые решения.
+
+### Сложность
+Обычно экспоненциальная: O(2ⁿ), O(n!), O(n·2ⁿ). Бэктрекинг не делает её полиномиальной — он лишь **не тратит время на заведомо невалидные ветки**.
+
+### Грабли
+- Сохранять **копию** \`path\`, а не ссылку — иначе все решения окажутся одинаковыми (пустыми).
+- Не забыть \`path.pop()\` — состояние «протекает» в соседние ветки.
+- Дубликаты: без сортировки и пропуска \`if (i > start && nums[i] === nums[i-1]) continue\` получишь повторы.
+
+### Задачи LeetCode
+78 Subsets · 46 Permutations · 39 Combination Sum · 51 N-Queens · 79 Word Search · 17 Letter Combinations · 131 Palindrome Partitioning
+        `),
+        examples: [
+          {
+            title: "N ферзей: перебор с возвратом",
+            description: "Ферзь ставится в безопасную клетку; если тупик — backtrack (красная вспышка) и пробуем дальше",
+            code: r(`
+import { useState, useEffect, useRef } from "react";
+
+const N = 6;
+
+function genSteps() {
+  const steps = [];
+  const cols = new Set(), d1 = new Set(), d2 = new Set();
+  const placement = [];
+  function solve(row) {
+    if (row === N) { steps.push({ placement: [...placement], kind: "solved" }); return true; }
+    for (let c = 0; c < N; c++) {
+      steps.push({ placement: [...placement], kind: "try", cell: [row, c] });
+      if (cols.has(c) || d1.has(row - c) || d2.has(row + c)) {
+        steps.push({ placement: [...placement], kind: "reject", cell: [row, c] });
+        continue;
+      }
+      cols.add(c); d1.add(row - c); d2.add(row + c); placement[row] = c;
+      steps.push({ placement: [...placement], kind: "place", cell: [row, c] });
+      if (solve(row + 1)) return true;
+      cols.delete(c); d1.delete(row - c); d2.delete(row + c);
+      placement.length = row;
+      steps.push({ placement: [...placement], kind: "backtrack", cell: [row, c] });
+    }
+    return false;
+  }
+  solve(0);
+  return steps;
+}
+
+export default function App() {
+  const steps = useRef(genSteps()).current;
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const timer = useRef(null);
+
+  useEffect(() => {
+    if (!playing) return;
+    timer.current = setInterval(() => {
+      setI((p) => { if (p >= steps.length - 1) { setPlaying(false); return p; } return p + 1; });
+    }, 90);
+    return () => clearInterval(timer.current);
+  }, [playing]);
+
+  const s = steps[i];
+  const [tr, tc] = s.cell || [-1, -1];
+
+  return (
+    <div style={{ padding: 20, fontFamily: "sans-serif" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(" + N + ", 1fr)", gap: 2,
+        marginBottom: 10, maxWidth: 300 }}>
+        {Array.from({ length: N }, (_, r) => Array.from({ length: N }, (_, c) => {
+          const hasQueen = s.placement[r] === c;
+          const isTry = r === tr && c === tc;
+          let bg = (r + c) % 2 ? "#1e293b" : "#0f172a";
+          if (isTry && s.kind === "reject") bg = "#7f1d1d";
+          if (isTry && s.kind === "backtrack") bg = "#ef4444";
+          if (isTry && s.kind === "try") bg = "#854d0e";
+          return (
+            <motion.div key={r + "-" + c} animate={{ backgroundColor: bg }}
+              style={{ aspectRatio: "1", borderRadius: 3, display: "grid", placeItems: "center", fontSize: 16 }}>
+              {hasQueen && (
+                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}>♛</motion.span>
+              )}
+            </motion.div>
+          );
+        }))}
+      </div>
+      <p style={{ fontSize: 13, minHeight: 20, color:
+        s.kind === "backtrack" ? "#ef4444" : s.kind === "solved" ? "#22c55e" : "#888" }}>
+        {s.kind === "try" && "Пробуем строку " + tr + ", столбец " + tc}
+        {s.kind === "reject" && "❌ Клетка бьётся — пропускаем"}
+        {s.kind === "place" && "✓ Ферзь поставлен — идём в следующую строку"}
+        {s.kind === "backtrack" && "↩ Тупик — снимаем ферзя, возврат"}
+        {s.kind === "solved" && "🎉 Решение найдено!"}
+      </p>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setPlaying((p) => !p)} disabled={i >= steps.length - 1}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>{playing ? "⏸" : "▶"}</button>
+        <button onClick={() => { setI(0); setPlaying(true); }}
+          style={{ padding: "6px 14px", borderRadius: 8, cursor: "pointer" }}>↺</button>
+        <span style={{ fontSize: 12, color: "#888", alignSelf: "center" }}>шаг {i}/{steps.length - 1}</span>
+      </div>
+    </div>
+  );
+}
+`),
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 // Плоский список всех топиков (удобно для роутинга)

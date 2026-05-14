@@ -19,6 +19,7 @@ import {
 } from "react";
 import { LiveProvider, LiveEditor, LiveError, LivePreview } from "react-live";
 import { themes } from "prism-react-renderer";
+import { motion, AnimatePresence } from "framer-motion";
 import styles from "./LiveExample.module.css";
 
 const SCOPE = {
@@ -39,6 +40,9 @@ const SCOPE = {
   Fragment,
   lazy,
   Suspense,
+  // framer-motion — для анимированных визуализаций алгоритмов
+  motion,
+  AnimatePresence,
 };
 
 // Адаптер: код в стиле Sandpack (с import/export default) → формат react-live noInline.
