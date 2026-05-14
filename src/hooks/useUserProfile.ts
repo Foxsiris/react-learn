@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { useUserId } from "../lib/auth";
+import { OWNER_ID } from "../lib/owner";
 
 export type UserProfile = {
   display_name: string;
@@ -24,7 +24,7 @@ export function formatJoined(iso: string): string {
 }
 
 export function useUserProfile() {
-  const userId = useUserId();
+  const userId = OWNER_ID;
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {

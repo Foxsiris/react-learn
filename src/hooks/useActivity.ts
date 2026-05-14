@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { useUserId } from "../lib/auth";
+import { OWNER_ID } from "../lib/owner";
 import { useProgress } from "./useProgress";
 
 const TABLE = "user_progress";
@@ -43,7 +43,7 @@ function levelFromCount(c: number): number {
 }
 
 export function useActivity(): Activity {
-  const userId = useUserId();
+  const userId = OWNER_ID;
   const progress = useProgress();
   const [state, setState] = useState<Activity>(empty);
 

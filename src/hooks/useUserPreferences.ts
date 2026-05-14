@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { useUserId } from "../lib/auth";
+import { OWNER_ID } from "../lib/owner";
 
 export type AccentColor = "terracotta" | "indigo" | "forest" | "plum";
 
@@ -27,7 +27,7 @@ function readLegacy(): Partial<Preferences> | null {
 }
 
 export function useUserPreferences() {
-  const userId = useUserId();
+  const userId = OWNER_ID;
   const [prefs, setPrefs] = useState<Preferences>(DEFAULTS);
   const [loaded, setLoaded] = useState(false);
 
