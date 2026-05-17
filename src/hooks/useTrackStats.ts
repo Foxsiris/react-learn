@@ -17,6 +17,8 @@ export type TrackStats = {
   weekMinutes: number[]; // 7 elements, oldest first, today last
   sessionsToday: number;
   bestStreak: number; // longest consecutive completed work sessions
+  // Minutes of focus per hour-of-day (0–23) aggregated across ALL history.
+  hourBuckets: number[];
 };
 
 const empty: TrackStats = {
@@ -27,6 +29,7 @@ const empty: TrackStats = {
   weekMinutes: [0, 0, 0, 0, 0, 0, 0],
   sessionsToday: 0,
   bestStreak: 0,
+  hourBuckets: new Array(24).fill(0),
 };
 
 function localDateKey(d: Date): string {
@@ -45,7 +48,11 @@ export function useTrackStats(): TrackStats {
     (async () => {
       const since = new Date();
       since.setDate(since.getDate() - 7);
-      const [{ data: weekRows, error: wErr }, { data: allRows, error: aErr }] = await Promise.all([
+      const [
+        { data: weekRows, error: wErr },
+        { data: allRows, error: aErr },
+        { data: hourRows, error: hErr },
+      ] = await Promise.all([
         supabase
           .from("focus_sessions")
           .select("started_at, duration_seconds, phase")
@@ -56,9 +63,20 @@ export function useTrackStats(): TrackStats {
           .select("group_id, duration_seconds, phase")
           .eq("user_id", OWNER_ID)
           .eq("phase", "work"),
+        supabase
+          .from("focus_sessions")
+          .select("started_at, duration_seconds")
+          .eq("user_id", OWNER_ID)
+          .eq("phase", "work"),
       ]);
       if (!alive) return;
-      if (wErr || aErr) console.error("[track_stats]", wErr ?? aErr);
+      if (wErr || aErr || hErr) console.error("[track_stats]", wErr ?? aErr ?? hErr);
+
+      const hourBuckets = new Array(24).fill(0);
+      for (const r of (hourRows ?? []) as Array<{ started_at: string; duration_seconds: number }>) {
+        const h = new Date(r.started_at).getHours();
+        hourBuckets[h] += Math.round(r.duration_seconds / 60);
+      }
 
       const byGroup = new Map<string, TrackHours>();
       for (const r of (allRows ?? []) as Array<{ group_id: string | null; duration_seconds: number; phase: string }>) {
@@ -98,6 +116,7 @@ export function useTrackStats(): TrackStats {
         weekMinutes,
         sessionsToday,
         bestStreak: Math.max(0, sessionsToday), // simple proxy for "best today"; can be improved later
+        hourBuckets,
       });
     })();
     return () => {

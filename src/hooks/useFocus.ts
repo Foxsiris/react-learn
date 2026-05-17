@@ -40,6 +40,7 @@ type RuntimeState = {
   running: boolean;
   cycles: number;
   groupId: string | null;
+  topicId: string | null;
   topicLabel: string;
   startedAt: number | null;
   sessions: FocusSession[];
@@ -53,6 +54,7 @@ let state: RuntimeState = {
   running: false,
   cycles: 0,
   groupId: "react",
+  topicId: null,
   topicLabel: "",
   startedAt: null,
   sessions: [],
@@ -103,6 +105,7 @@ async function recordSession(payload: {
   durationSeconds: number;
   phase: Phase;
   groupId: string | null;
+  topicId: string | null;
   topicLabel: string;
 }) {
   const row = {
@@ -112,6 +115,7 @@ async function recordSession(payload: {
     duration_seconds: payload.durationSeconds,
     phase: payload.phase,
     group_id: payload.groupId,
+    topic_id: payload.topicId,
     topic_label: payload.topicLabel || null,
   };
   const { data, error } = await supabase
@@ -159,6 +163,7 @@ function ensureTick() {
       durationSeconds: completedFullDuration,
       phase: phaseJustFinished,
       groupId: state.groupId,
+      topicId: state.topicId,
       topicLabel: state.topicLabel,
     });
 
@@ -246,6 +251,12 @@ export function useFocus() {
     },
     setTopicLabel(label: string) {
       set({ topicLabel: label });
+    },
+    setTopicId(topicId: string | null) {
+      set({ topicId });
+    },
+    bindTopic(opts: { topicId: string; topicLabel: string; groupId: string | null }) {
+      set({ topicId: opts.topicId, topicLabel: opts.topicLabel, groupId: opts.groupId });
     },
     async setSetting<K extends keyof FocusSettings>(key: K, value: FocusSettings[K]) {
       const next = { ...state.settings, [key]: value };

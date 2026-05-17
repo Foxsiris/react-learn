@@ -158,6 +158,82 @@ export default function Profile() {
         <Stat label="Сессий фокуса" value={`${Array.from(tracks.byGroup.values()).reduce((s, t) => s + t.sessions, 0)}`} icon={<I.timer size={18} />} tint="var(--info-soft)" color="var(--info)" />
       </div>
 
+      <div className="card">
+        <SectionTitle
+          icon={<I.clock size={16} />}
+          title="Когда я учусь"
+          action={
+            <span className="small muted">
+              пик: {tracks.hourBuckets.indexOf(Math.max(...tracks.hourBuckets, 1))
+                .toString()
+                .padStart(2, "0")}
+              :00
+            </span>
+          }
+        />
+        <div className="row" style={{ gap: 3, alignItems: "flex-end", height: 100 }}>
+          {tracks.hourBuckets.map((mins, h) => {
+            const max = Math.max(...tracks.hourBuckets, 1);
+            const pct = (mins / max) * 100;
+            const block = h < 6 ? "ночь" : h < 12 ? "утро" : h < 18 ? "день" : "вечер";
+            const tint =
+              block === "ночь"
+                ? "var(--info-soft)"
+                : block === "утро"
+                  ? "var(--warning-soft)"
+                  : block === "день"
+                    ? "var(--accent-tint)"
+                    : "var(--success-soft)";
+            const bar =
+              block === "ночь"
+                ? "var(--info)"
+                : block === "утро"
+                  ? "#c89a3f"
+                  : block === "день"
+                    ? "var(--accent)"
+                    : "var(--success)";
+            return (
+              <div
+                key={h}
+                title={`${h.toString().padStart(2, "0")}:00 — ${mins} мин`}
+                style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}
+              >
+                <div
+                  style={{
+                    width: "100%",
+                    minHeight: mins > 0 ? 4 : 2,
+                    height: `${Math.max(pct, mins > 0 ? 8 : 4)}%`,
+                    background: mins > 0 ? bar : tint,
+                    borderRadius: 3,
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <div className="row" style={{ gap: 0, marginTop: 6 }}>
+          {tracks.hourBuckets.map((_, h) => (
+            <div key={h} style={{ flex: 1, textAlign: "center" }} className="muted" >
+              {h % 6 === 0 ? <span style={{ fontSize: 10 }}>{h.toString().padStart(2, "0")}</span> : <span>&nbsp;</span>}
+            </div>
+          ))}
+        </div>
+        <div className="row" style={{ gap: 14, marginTop: 12, flexWrap: "wrap", fontSize: 11.5 }}>
+          <span className="row" style={{ gap: 4 }}>
+            <i style={{ width: 10, height: 10, borderRadius: 2, background: "var(--info)" }} /> ночь 00–06
+          </span>
+          <span className="row" style={{ gap: 4 }}>
+            <i style={{ width: 10, height: 10, borderRadius: 2, background: "#c89a3f" }} /> утро 06–12
+          </span>
+          <span className="row" style={{ gap: 4 }}>
+            <i style={{ width: 10, height: 10, borderRadius: 2, background: "var(--accent)" }} /> день 12–18
+          </span>
+          <span className="row" style={{ gap: 4 }}>
+            <i style={{ width: 10, height: 10, borderRadius: 2, background: "var(--success)" }} /> вечер 18–24
+          </span>
+        </div>
+      </div>
+
       <div className="grid-2">
         <div className="card">
           <SectionTitle

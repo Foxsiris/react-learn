@@ -17,6 +17,7 @@ const NAV: Array<{ to: string; label: string; icon: IconKey; end?: boolean }> = 
   { to: "/lesson",       label: "Текущий урок",   icon: "book" },
   { to: "/playground",   label: "Песочница",      icon: "code" },
   { to: "/focus",        label: "Фокус-таймер",   icon: "timer" },
+  { to: "/review",       label: "Повторение",     icon: "refresh" },
   { to: "/achievements", label: "Достижения",     icon: "trophy" },
   { to: "/profile",      label: "Профиль",        icon: "user" },
 ];

@@ -1,12 +1,17 @@
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
-import { useMemo } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { findTopic, type TopicStatus } from "../data/topics";
 import { useCatalog, findCatalogGroupOf } from "../hooks/useTopicsCatalog";
 import { getBrainNote } from "../data/brainNotes";
+import { getQuizForTopic } from "../data/quizzes";
 import TheoryRenderer from "../components/TheoryRenderer";
-import LiveExample from "../components/LiveExample";
+// react-live + prism + framer-motion is a sizeable chunk; only loaded when a
+// topic actually has interactive examples to show.
+const LiveExample = lazy(() => import("../components/LiveExample"));
+import Quiz from "../components/Quiz";
 import { I, type IconKey } from "../components/Icons";
 import { setStatus, useTopicStatus } from "../hooks/useProgress";
+import { useFocus } from "../hooks/useFocus";
 import { useToast } from "../components/ToastContext";
 
 const STATUS_ORDER: Array<{ key: TopicStatus; icon: IconKey; label: string; toastMsg: string }> = [
@@ -25,6 +30,8 @@ export default function TopicPage() {
   const status = useTopicStatus(id ?? "");
   const navigate = useNavigate();
   const { fireToast } = useToast();
+  const focus = useFocus();
+  const quiz = id ? getQuizForTopic(id) : undefined;
 
   const neighbors = useMemo(() => {
     if (!id || catalog.topics.length === 0) return { prev: undefined, next: undefined };
@@ -162,10 +169,33 @@ export default function TopicPage() {
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{ex.title}</div>
                     {ex.description && <div className="small muted" style={{ marginTop: 4 }}>{ex.description}</div>}
                   </div>
-                  <LiveExample code={ex.code} />
+                  <Suspense
+                    fallback={
+                      <div style={{ padding: 24, textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
+                        ⏳ Подгружаем интерактивный редактор…
+                      </div>
+                    }
+                  >
+                    <LiveExample code={ex.code} />
+                  </Suspense>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {quiz && quiz.length > 0 && (
+          <div className="card">
+            <div className="between" style={{ marginBottom: 14 }}>
+              <div className="row">
+                <span style={{ color: "var(--accent)", display: "grid", placeItems: "center" }}>
+                  <I.target size={16} />
+                </span>
+                <h3 style={{ fontSize: 16 }}>Быстрая проверка</h3>
+              </div>
+              <span className="small muted">за неверный ответ — минус жизнь 💔</span>
+            </div>
+            <Quiz questions={quiz} />
           </div>
         )}
 
@@ -198,6 +228,17 @@ export default function TopicPage() {
             <span />
           )}
           <div className="row" style={{ gap: 10 }}>
+            <button
+              className="btn btn-ghost"
+              onClick={() => {
+                focus.bindTopic({ topicId: id, topicLabel: meta.title, groupId: group.id });
+                focus.setPhase("work");
+                focus.start();
+                navigate("/focus");
+              }}
+            >
+              <I.timer size={14} /> Фокус по теме
+            </button>
             <Link to="/playground" className="btn btn-ghost">
               <I.code size={14} /> В песочницу
             </Link>

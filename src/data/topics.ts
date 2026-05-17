@@ -6,6 +6,13 @@ export interface CodeExample {
   code: string;
 }
 
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correct: number;
+  explanation?: string;
+}
+
 export interface Topic {
   id: string;
   title: string;
@@ -13,6 +20,7 @@ export interface Topic {
   theory: string;
   examples: CodeExample[];
   links?: { title: string; url: string }[];
+  quiz?: QuizQuestion[];
 }
 
 export interface Block {
