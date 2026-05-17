@@ -17,6 +17,7 @@ import {
   Circle,
   Lock,
   Play,
+  Pause,
   Search,
   Bell,
   Star,
@@ -35,6 +36,7 @@ import {
   Sparkles,
   List,
   Settings,
+  Timer,
   type LucideProps,
 } from "lucide-react";
 
@@ -84,6 +86,8 @@ export const I = {
   list: List,
   settings: Settings,
   fire: filled(Flame),
+  timer: Timer,
+  pauseSimple: Pause,
 } satisfies Record<string, IconCmp>;
 
 export type IconKey = keyof typeof I;

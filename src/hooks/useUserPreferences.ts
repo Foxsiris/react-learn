@@ -3,13 +3,19 @@ import { supabase } from "../lib/supabase";
 import { OWNER_ID } from "../lib/owner";
 
 export type AccentColor = "terracotta" | "indigo" | "forest" | "plum";
+export type DashboardLayout = "balanced" | "focus" | "compact";
 
 export type Preferences = {
   accent_color: AccentColor;
   animations_enabled: boolean;
+  dashboard_layout: DashboardLayout;
 };
 
-const DEFAULTS: Preferences = { accent_color: "terracotta", animations_enabled: true };
+const DEFAULTS: Preferences = {
+  accent_color: "terracotta",
+  animations_enabled: true,
+  dashboard_layout: "balanced",
+};
 const LEGACY_KEY = "react-learn:tweaks";
 
 function readLegacy(): Partial<Preferences> | null {
@@ -37,7 +43,7 @@ export function useUserPreferences() {
     (async () => {
       const { data, error } = await supabase
         .from("user_preferences")
-        .select("accent_color, animations_enabled")
+        .select("accent_color, animations_enabled, dashboard_layout")
         .eq("user_id", userId)
         .maybeSingle();
       if (!alive) return;
@@ -50,6 +56,7 @@ export function useUserPreferences() {
         setPrefs({
           accent_color: data.accent_color as AccentColor,
           animations_enabled: data.animations_enabled,
+          dashboard_layout: (data.dashboard_layout as DashboardLayout) ?? DEFAULTS.dashboard_layout,
         });
         setLoaded(true);
         try {
@@ -64,6 +71,7 @@ export function useUserPreferences() {
       const seed: Preferences = {
         accent_color: (legacy?.accent_color as AccentColor) ?? DEFAULTS.accent_color,
         animations_enabled: legacy?.animations_enabled ?? DEFAULTS.animations_enabled,
+        dashboard_layout: DEFAULTS.dashboard_layout,
       };
       const { error: insErr } = await supabase
         .from("user_preferences")

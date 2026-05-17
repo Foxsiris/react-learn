@@ -4,8 +4,10 @@ import { I, type IconKey } from "./Icons";
 import { useProgress } from "../hooks/useProgress";
 import { useActivity } from "../hooks/useActivity";
 import { useCatalog } from "../hooks/useTopicsCatalog";
-import { useUserPreferences, type AccentColor } from "../hooks/useUserPreferences";
+import { useUserPreferences, type AccentColor, type DashboardLayout } from "../hooks/useUserPreferences";
 import { useUserProfile } from "../hooks/useUserProfile";
+import { useUserState, bumpLongestStreak } from "../hooks/useUserState";
+import { useFocus } from "../hooks/useFocus";
 import { computeStats, findCurrentTopic, getRank } from "../lib/stats";
 import { ToastProvider, useToast } from "./ToastContext";
 
@@ -14,6 +16,7 @@ const NAV: Array<{ to: string; label: string; icon: IconKey; end?: boolean }> = 
   { to: "/catalog",      label: "Карта обучения", icon: "map" },
   { to: "/lesson",       label: "Текущий урок",   icon: "book" },
   { to: "/playground",   label: "Песочница",      icon: "code" },
+  { to: "/focus",        label: "Фокус-таймер",   icon: "timer" },
   { to: "/achievements", label: "Достижения",     icon: "trophy" },
   { to: "/profile",      label: "Профиль",        icon: "user" },
 ];
@@ -93,10 +96,54 @@ function Sidebar({ currentLessonId }: { currentLessonId: string | undefined }) {
   );
 }
 
+function PomodoroPill() {
+  const focus = useFocus();
+  const navigate = useNavigate();
+  const m = Math.floor(focus.remaining / 60);
+  const s = focus.remaining % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  const isWork = focus.phase === "work";
+
+  return (
+    <button
+      className="stat-pill"
+      onClick={() => navigate("/focus")}
+      title={focus.running ? "Идёт фокус-сессия" : "Открыть таймер"}
+      style={{
+        cursor: "pointer",
+        border: "1px solid var(--border)",
+        background: focus.running ? (isWork ? "var(--accent-tint)" : "var(--success-soft)") : "var(--surface)",
+        color: focus.running ? (isWork ? "var(--accent-deep)" : "var(--success)") : "var(--ink-2)",
+        padding: "5px 10px 5px 6px",
+      }}
+    >
+      <span
+        className={focus.running ? "pulse" : ""}
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 7,
+          background: focus.running ? (isWork ? "var(--accent)" : "var(--success)") : "var(--bg-2)",
+          color: focus.running ? "white" : "var(--muted)",
+          display: "grid",
+          placeItems: "center",
+        }}
+      >
+        <I.clock size={12} />
+      </span>
+      <span className="mono" style={{ fontVariantNumeric: "tabular-nums", letterSpacing: "0.02em" }}>
+        {mm}:{ss}
+      </span>
+    </button>
+  );
+}
+
 function Topbar({ currentLessonId, isTopicRoute }: { currentLessonId: string | undefined; isTopicRoute: boolean }) {
   const progress = useProgress();
   const activity = useActivity();
   const catalog = useCatalog();
+  const { state: us } = useUserState();
   const { profile } = useUserProfile();
   const stats = computeStats(progress, catalog.topics.length);
   const navigate = useNavigate();
@@ -167,14 +214,15 @@ function Topbar({ currentLessonId, isTopicRoute }: { currentLessonId: string | u
         </div>
       </div>
       <div className="row" style={{ gap: 10 }}>
+        <PomodoroPill />
         <span className="stat-pill streak" title="Стрик — дни подряд">
           <I.fire size={14} /> {activity.streak}
         </span>
         <span className="stat-pill xp" title="Опыт">
           <I.bolt size={14} /> {stats.xp.toLocaleString("ru")}
         </span>
-        <span className="stat-pill hearts" title="Жизни (декоративно)">
-          <I.heart size={14} /> 5/5
+        <span className="stat-pill hearts" title="Жизни">
+          <I.heart size={14} /> {us.hearts}/{us.hearts_max}
         </span>
         <button className="btn btn-quiet" style={{ padding: 8 }} onClick={() => fireToast("Нет новых уведомлений")}>
           <I.bell size={16} />
@@ -193,7 +241,7 @@ function TweaksPanel() {
   return (
     <div style={{ position: "fixed", right: 18, bottom: 18, zIndex: 100 }}>
       {open && (
-        <div className="card" style={{ width: 260, marginBottom: 10, padding: 14 }}>
+        <div className="card" style={{ width: 280, marginBottom: 10, padding: 14 }}>
           <div className="between" style={{ marginBottom: 12 }}>
             <h3 style={{ fontSize: 14 }}>Tweaks</h3>
             <button className="btn btn-quiet small" style={{ padding: 4 }} onClick={() => setOpen(false)}>
@@ -216,6 +264,26 @@ function TweaksPanel() {
                 }}
                 aria-label={key}
               />
+            ))}
+          </div>
+          <div className="nav-section-title" style={{ padding: "0 0 6px" }}>Раскладка дашборда</div>
+          <div className="row" style={{ gap: 6, marginBottom: 14 }}>
+            {(["balanced", "focus", "compact"] as DashboardLayout[]).map((id) => (
+              <button
+                key={id}
+                onClick={() => void update("dashboard_layout", id)}
+                className="btn btn-quiet small"
+                style={{
+                  flex: 1,
+                  padding: "6px 8px",
+                  background: prefs.dashboard_layout === id ? "var(--accent-tint)" : "var(--bg-2)",
+                  color: prefs.dashboard_layout === id ? "var(--accent-deep)" : "var(--muted)",
+                  fontWeight: 700,
+                  textTransform: "capitalize",
+                }}
+              >
+                {id === "balanced" ? "Баланс" : id === "focus" ? "Фокус" : "Компакт"}
+              </button>
             ))}
           </div>
           <div className="nav-section-title" style={{ padding: "0 0 6px" }}>Интерфейс</div>
@@ -245,8 +313,15 @@ function LayoutInner() {
   const catalog = useCatalog();
   const current = findCurrentTopic(progress, catalog.topics);
   const { prefs } = useUserPreferences();
+  const activity = useActivity();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Mirror the rolling longest-streak from useActivity into user_state so other
+  // surfaces (achievements, profile) can read it without recomputing.
+  useEffect(() => {
+    if (activity.longestStreak > 0) bumpLongestStreak(activity.longestStreak);
+  }, [activity.longestStreak]);
 
   useEffect(() => {
     const a = ACCENTS[prefs.accent_color] ?? ACCENTS.terracotta;

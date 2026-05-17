@@ -6,6 +6,7 @@ import Topic from "./pages/Topic";
 import Playground from "./pages/Playground";
 import Profile from "./pages/Profile";
 import Achievements from "./pages/Achievements";
+import Focus from "./pages/Focus";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/topic/:id" element={<Topic />} />
           <Route path="/playground" element={<Playground />} />
+          <Route path="/focus" element={<Focus />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/achievements" element={<Achievements />} />
           <Route path="*" element={<Navigate to="/" replace />} />

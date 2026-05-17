@@ -16,6 +16,9 @@ export type CatalogGroup = {
   emoji: string;
   description: string;
   order_index: number;
+  color: string;
+  color_soft: string;
+  short: string;
   topics: CatalogTopic[];
 };
 
@@ -48,7 +51,7 @@ async function hydrate() {
   if (hydrated) return;
   hydrated = true;
   const [{ data: groups, error: gErr }, { data: topics, error: tErr }] = await Promise.all([
-    supabase.from("topic_groups").select("id,title,emoji,description,order_index").order("order_index"),
+    supabase.from("topic_groups").select("id,title,emoji,description,order_index,color,color_soft,short").order("order_index"),
     supabase.from("topics").select("id,group_id,title,description,order_index,example_count").order("order_index"),
   ]);
   if (gErr || tErr || !groups || !topics) {
@@ -59,8 +62,11 @@ async function hydrate() {
   }
 
   const tRows = topics as CatalogTopic[];
-  const gRows = (groups as Array<Omit<CatalogGroup, "topics">>).map((g) => ({
+  const gRows = (groups as Array<Omit<CatalogGroup, "topics"> & { color: string | null; color_soft: string | null; short: string | null }>).map((g) => ({
     ...g,
+    color: g.color ?? "#e85a2b",
+    color_soft: g.color_soft ?? "#fbe7dc",
+    short: g.short ?? g.title,
     topics: tRows.filter((t) => t.group_id === g.id).sort((a, b) => a.order_index - b.order_index),
   }));
 

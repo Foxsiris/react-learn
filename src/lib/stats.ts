@@ -116,25 +116,40 @@ export type Achievement = {
   ribbon?: "NEW";
 };
 
-export function computeAchievements(progress: ProgressMap, groups: CatalogGroup[], totalTopics: number): Achievement[] {
-  const stats = computeStats(progress, totalTopics);
-  const blockStats = computeBlockStats(progress, groups);
+export type AchievementContext = {
+  progress: ProgressMap;
+  groups: CatalogGroup[];
+  totalTopics: number;
+  streak: number;
+  longestStreak: number;
+  focusSessions: number;
+  focusHours: number;
+  bestStreak?: number;
+};
+
+export function computeAchievements(ctx: AchievementContext): Achievement[] {
+  const stats = computeStats(ctx.progress, ctx.totalTopics);
+  const blockStats = computeBlockStats(ctx.progress, ctx.groups);
   const blocksFullyDone = blockStats.filter((b) => b.total > 0 && b.done === b.total).length;
   const blocksStarted = blockStats.filter((b) => b.done + b.inProgress > 0).length;
 
   const ach: Achievement[] = [
-    { id: "first-step", glyph: "🔥", title: "Первый шаг", sub: "Заверши свой первый урок", earned: stats.doneCount >= 1, progress: Math.min(1, stats.doneCount), target: 1 },
-    { id: "warmup", glyph: "⚡", title: "Разогрев", sub: "5 уроков пройдено", earned: stats.doneCount >= 5, progress: Math.min(5, stats.doneCount), target: 5 },
-    { id: "bookworm", glyph: "📚", title: "Книжный червь", sub: "10 уроков пройдено", earned: stats.doneCount >= 10, progress: Math.min(10, stats.doneCount), target: 10 },
-    { id: "scholar", glyph: "🎓", title: "Эрудит", sub: "25 уроков пройдено", earned: stats.doneCount >= 25, progress: Math.min(25, stats.doneCount), target: 25 },
-    { id: "guru", glyph: "🏆", title: "Гуру", sub: "50 уроков пройдено", earned: stats.doneCount >= 50, progress: Math.min(50, stats.doneCount), target: 50 },
-    { id: "completionist", glyph: "💎", title: "Перфекционист", sub: "Все темы курса пройдены", earned: stats.totalTopics > 0 && stats.doneCount === stats.totalTopics, progress: stats.doneCount, target: stats.totalTopics },
-    { id: "block-master", glyph: "⭐", title: "Мастер раздела", sub: "Закрой целый блок тем", earned: blocksFullyDone >= 1, progress: Math.min(1, blocksFullyDone), target: 1, ribbon: blocksFullyDone >= 1 ? "NEW" : undefined },
-    { id: "many-blocks", glyph: "🎯", title: "Широкий кругозор", sub: "Начни 3 разных блока", earned: blocksStarted >= 3, progress: Math.min(3, blocksStarted), target: 3 },
-    { id: "comeback", glyph: "🔁", title: "Возвращенец", sub: "Отметь 5 тем на повторение", earned: stats.reviewCount >= 5, progress: Math.min(5, stats.reviewCount), target: 5 },
-    { id: "pragmatic", glyph: "🛠️", title: "Прагматик", sub: "Отметь 3 темы как «пока не нужно»", earned: stats.skipCount >= 3, progress: Math.min(3, stats.skipCount), target: 3 },
-    { id: "level-5", glyph: "🚀", title: "На взлёт", sub: "Достигни 5-го уровня", earned: stats.level >= 5, progress: Math.min(5, stats.level), target: 5 },
-    { id: "level-10", glyph: "🧠", title: "Десятка", sub: "Достигни 10-го уровня", earned: stats.level >= 10, progress: Math.min(10, stats.level), target: 10 },
+    { id: "first-step",    glyph: "🐣", title: "Первый шаг",       sub: "Заверши свой первый урок",   earned: stats.doneCount >= 1,  progress: Math.min(1, stats.doneCount),    target: 1 },
+    { id: "warmup",        glyph: "⚡", title: "Спринт",            sub: "5 уроков за всё время",       earned: stats.doneCount >= 5,  progress: Math.min(5, stats.doneCount),    target: 5 },
+    { id: "bookworm",      glyph: "📚", title: "Книжный червь",    sub: "10 уроков пройдено",          earned: stats.doneCount >= 10, progress: Math.min(10, stats.doneCount),   target: 10 },
+    { id: "sharp",         glyph: "🎯", title: "Меткий",            sub: "25 уроков пройдено",          earned: stats.doneCount >= 25, progress: Math.min(25, stats.doneCount),   target: 25 },
+    { id: "star-hour",     glyph: "🌟", title: "Звёздный час",      sub: "Закрой целый блок тем",       earned: blocksFullyDone >= 1,  progress: Math.min(1, blocksFullyDone),    target: 1, ribbon: blocksFullyDone >= 1 ? "NEW" : undefined },
+    { id: "takeoff",       glyph: "🚀", title: "На взлёт",          sub: "7 дней подряд",                earned: ctx.streak >= 7,        progress: Math.min(7, ctx.streak),         target: 7 },
+    { id: "crystal",       glyph: "💎", title: "Кристалл",          sub: "30 дней подряд",               earned: ctx.longestStreak >= 30, progress: Math.min(30, ctx.longestStreak), target: 30 },
+    { id: "polyglot",      glyph: "🧠", title: "Эрудит",            sub: "Начни 3 разных трека",         earned: blocksStarted >= 3,    progress: Math.min(3, blocksStarted),       target: 3 },
+    { id: "champion",      glyph: "🏆", title: "Чемпион",           sub: "Заверши весь курс",            earned: stats.totalTopics > 0 && stats.doneCount === stats.totalTopics, progress: stats.doneCount, target: stats.totalTopics || 1 },
+    { id: "comeback",      glyph: "🔁", title: "Возвращенец",       sub: "Отметь 5 тем на повторение",   earned: stats.reviewCount >= 5,  progress: Math.min(5, stats.reviewCount),  target: 5 },
+    { id: "pragmatic",     glyph: "🛠️", title: "Прагматик",         sub: "Отметь 3 темы как «пока»",     earned: stats.skipCount >= 3,    progress: Math.min(3, stats.skipCount),    target: 3 },
+    { id: "level-5",       glyph: "🔥", title: "Уровень 5",         sub: "Достигни 5-го уровня",         earned: stats.level >= 5,        progress: Math.min(5, stats.level),         target: 5 },
+    { id: "level-10",      glyph: "⚔️", title: "Десятка",           sub: "Достигни 10-го уровня",        earned: stats.level >= 10,       progress: Math.min(10, stats.level),        target: 10 },
+    { id: "pomodorer",     glyph: "🍅", title: "Помодорщик",        sub: "10 фокус-сессий за всё время", earned: ctx.focusSessions >= 10, progress: Math.min(10, ctx.focusSessions),  target: 10 },
+    { id: "deep-work",     glyph: "🌙", title: "Полуночник",        sub: "5 часов фокуса",                earned: ctx.focusHours >= 5,     progress: Math.min(5, Math.floor(ctx.focusHours)), target: 5 },
+    { id: "guru",          glyph: "🐉", title: "Гуру",              sub: "Достигни 200 часов фокуса",    earned: ctx.focusHours >= 200,   progress: Math.min(200, Math.floor(ctx.focusHours)), target: 200 },
   ];
   return ach;
 }

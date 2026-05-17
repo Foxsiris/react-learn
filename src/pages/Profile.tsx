@@ -2,8 +2,13 @@ import { useProgress } from "../hooks/useProgress";
 import { useActivity } from "../hooks/useActivity";
 import { useCatalog } from "../hooks/useTopicsCatalog";
 import { useUserProfile, formatJoined } from "../hooks/useUserProfile";
-import { computeAchievements, computeBlockStats, computeStats, getRank } from "../lib/stats";
+import { useTrackStats } from "../hooks/useTrackStats";
+import { useAchievements } from "../hooks/useAchievements";
+import { useUserState } from "../hooks/useUserState";
+import { computeBlockStats, computeStats, getRank as getXpRank } from "../lib/stats";
+import { getRank } from "../lib/ranks";
 import { I } from "../components/Icons";
+import { RankRow, RankLadder } from "../components/RankUI";
 import { useToast } from "../components/ToastContext";
 
 function SectionTitle({ icon, title, action }: { icon: React.ReactNode; title: string; action?: React.ReactNode }) {
@@ -42,15 +47,41 @@ function timeAgo(iso: string): string {
   return d.toLocaleDateString("ru");
 }
 
+function Stat({ label, value, icon, tint, color }: { label: string; value: string; icon: React.ReactNode; tint: string; color: string }) {
+  return (
+    <div className="card tight">
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 11,
+          background: tint,
+          color,
+          display: "grid",
+          placeItems: "center",
+          marginBottom: 12,
+        }}
+      >
+        {icon}
+      </div>
+      <div className="muted small">{label}</div>
+      <div style={{ fontWeight: 800, fontSize: 22, marginTop: 2 }}>{value}</div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const progress = useProgress();
   const activity = useActivity();
   const catalog = useCatalog();
   const { profile } = useUserProfile();
+  const { state: us } = useUserState();
   const stats = computeStats(progress, catalog.topics.length);
   const blockStats = computeBlockStats(progress, catalog.groups);
-  const achievements = computeAchievements(progress, catalog.groups, catalog.topics.length);
+  const achievements = useAchievements();
+  const tracks = useTrackStats();
   const { fireToast } = useToast();
+  const globalRank = getRank(tracks.totalHours);
 
   const displayName = profile?.display_name ?? "…";
   const handle = profile?.handle ?? "—";
@@ -79,12 +110,18 @@ export default function Profile() {
             {initial}
           </div>
           <div style={{ flex: 1, minWidth: 260 }}>
-            <div className="row" style={{ gap: 10, marginBottom: 6 }}>
+            <div className="row" style={{ gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
               <h1 className="serif" style={{ fontSize: 30 }}>{displayName}</h1>
               <span className="chip accent">Уровень {stats.level}</span>
+              <span
+                className="chip"
+                style={{ background: globalRank.tint, color: globalRank.color, borderColor: globalRank.color + "33" }}
+              >
+                {globalRank.glyph} {globalRank.name}
+              </span>
             </div>
             <div className="muted" style={{ marginBottom: 12 }}>
-              @{handle} · {getRank(stats.level)}{joined && ` · с ${joined}`}
+              @{handle} · {getXpRank(stats.level)}{joined && ` · с ${joined}`}
             </div>
             <div className="progress" style={{ maxWidth: 420, marginBottom: 8 }}>
               <span style={{ width: `${stats.progressInLevel * 100}%` }} />
@@ -103,8 +140,8 @@ export default function Profile() {
 
       <div className="grid-4">
         <Stat label="Всего XP" value={stats.xpTotal.toLocaleString("ru")} icon={<I.bolt size={18} />} tint="var(--warning-soft)" color="#8c6a1f" />
+        <Stat label="Часов фокуса" value={tracks.totalHours.toFixed(1) + " ч"} icon={<I.clock size={18} />} tint={globalRank.tint} color={globalRank.color} />
         <Stat label="Стрик" value={activity.streak + " дн"} icon={<I.fire size={18} />} tint="var(--accent-tint)" color="var(--accent-deep)" />
-        <Stat label="Лучший стрик" value={activity.longestStreak + " дн"} icon={<I.flame size={18} />} tint="var(--accent-tint)" color="var(--accent-deep)" />
         <Stat
           label="Достижения"
           value={`${achievements.filter((a) => a.earned).length} / ${achievements.length}`}
@@ -117,8 +154,8 @@ export default function Profile() {
       <div className="grid-4">
         <Stat label="Изучено" value={`${stats.doneCount}`} icon={<I.done size={20} />} tint="var(--st-done-bg)" color="var(--st-done)" />
         <Stat label="Повторить" value={`${stats.reviewCount}`} icon={<I.pause size={20} />} tint="var(--st-pause-bg)" color="var(--st-pause)" />
-        <Stat label="Пропущено" value={`${stats.skipCount}`} icon={<I.skip size={20} />} tint="var(--st-skip-bg)" color="var(--st-skip)" />
-        <Stat label="Не начато" value={`${stats.todoCount}`} icon={<I.book size={18} />} tint="var(--info-soft)" color="var(--info)" />
+        <Stat label="Лучший стрик" value={`${Math.max(activity.longestStreak, us.longest_streak)} дн`} icon={<I.flame size={20} />} tint="var(--accent-tint)" color="var(--accent-deep)" />
+        <Stat label="Сессий фокуса" value={`${Array.from(tracks.byGroup.values()).reduce((s, t) => s + t.sessions, 0)}`} icon={<I.timer size={18} />} tint="var(--info-soft)" color="var(--info)" />
       </div>
 
       <div className="grid-2">
@@ -190,8 +227,41 @@ export default function Profile() {
         </div>
       </div>
 
+      <div className="grid-2">
+        <div className="card">
+          <SectionTitle icon={<I.trophy size={16} />} title="Ранги по трекам" />
+          <div className="col" style={{ gap: 0 }}>
+            {catalog.groups.map((g) => (
+              <RankRow
+                key={g.id}
+                title={g.title}
+                icon={g.emoji}
+                iconBg={g.color_soft}
+                iconColor={g.color}
+                hours={tracks.byGroup.get(g.id)?.hours ?? 0}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="card">
+          <SectionTitle
+            icon={<I.spark size={16} />}
+            title="Общая шкала"
+            action={
+              <span
+                className="chip"
+                style={{ background: globalRank.tint, color: globalRank.color, borderColor: globalRank.color + "33" }}
+              >
+                {globalRank.glyph} {globalRank.name}
+              </span>
+            }
+          />
+          <RankLadder hours={tracks.totalHours} />
+        </div>
+      </div>
+
       <div className="card">
-        <SectionTitle icon={<I.book size={16} />} title="Блоки в работе" />
+        <SectionTitle icon={<I.book size={16} />} title="Треки в работе" />
         <div className="col" style={{ gap: 14 }}>
           {catalog.groups.map((b) => {
             const s = blockStats.find((x) => x.blockId === b.id);
@@ -202,8 +272,8 @@ export default function Profile() {
                     width: 44,
                     height: 44,
                     borderRadius: 12,
-                    background: "var(--accent-tint)",
-                    color: "var(--accent-deep)",
+                    background: b.color_soft,
+                    color: b.color,
                     display: "grid",
                     placeItems: "center",
                     flexShrink: 0,
@@ -220,7 +290,7 @@ export default function Profile() {
                     </span>
                   </div>
                   <div className="progress thin" style={{ marginTop: 6 }}>
-                    <span style={{ width: `${(s?.progress ?? 0) * 100}%` }} />
+                    <span style={{ width: `${(s?.progress ?? 0) * 100}%`, background: b.color }} />
                   </div>
                 </div>
               </div>
@@ -228,29 +298,6 @@ export default function Profile() {
           })}
         </div>
       </div>
-    </div>
-  );
-}
-
-function Stat({ label, value, icon, tint, color }: { label: string; value: string; icon: React.ReactNode; tint: string; color: string }) {
-  return (
-    <div className="card tight">
-      <div
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 11,
-          background: tint,
-          color: color,
-          display: "grid",
-          placeItems: "center",
-          marginBottom: 12,
-        }}
-      >
-        {icon}
-      </div>
-      <div className="muted small">{label}</div>
-      <div style={{ fontWeight: 800, fontSize: 22, marginTop: 2 }}>{value}</div>
     </div>
   );
 }
