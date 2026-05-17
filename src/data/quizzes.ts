@@ -129,6 +129,154 @@ export const QUIZZES: Record<string, QuizQuestion[]> = {
       explanation: "Преждевременный useMemo чаще вредит, чем помогает. Сначала измерь.",
     },
   ],
+
+  // ── JS advanced ────────────────────────────────────────────────
+  "js-closures": [
+    {
+      question: "Что выведет: `for (var i=0;i<3;i++) setTimeout(() => console.log(i), 0)` ?",
+      options: ["0, 1, 2", "3, 3, 3", "undefined, undefined, undefined", "ошибка"],
+      correct: 1,
+      explanation:
+        "`var` — функциональная область, все колбэки видят одну `i`. К моменту таймаута цикл завершён, i=3.",
+    },
+    {
+      question: "Что нужно изменить, чтобы вывело 0, 1, 2?",
+      options: ["заменить var на let", "обернуть в IIFE", "оба варианта работают", "никак"],
+      correct: 2,
+    },
+  ],
+  "js-this": [
+    {
+      question: "Что такое this в стрелочной функции?",
+      options: [
+        "this объекта, в котором она вызвана",
+        "this из окружающего лексического контекста",
+        "globalThis всегда",
+        "undefined всегда",
+      ],
+      correct: 1,
+      explanation: "Стрелки не имеют собственного this — берут из места объявления.",
+    },
+  ],
+  "js-event-loop": [
+    {
+      question: "Что выведет: `console.log(1); setTimeout(()=>console.log(2),0); Promise.resolve().then(()=>console.log(3)); console.log(4);` ?",
+      options: ["1 2 3 4", "1 4 3 2", "1 4 2 3", "1 3 4 2"],
+      correct: 1,
+      explanation: "Сначала синхронный код (1, 4). Потом все микротаски (3). Потом макротаска setTimeout (2).",
+    },
+  ],
+  "js-promises-deep": [
+    {
+      question: "Чем Promise.all отличается от Promise.allSettled?",
+      options: [
+        "Они одинаковые",
+        "all падает на первой ошибке; allSettled всегда ждёт всех",
+        "all быстрее всегда",
+        "allSettled не существует",
+      ],
+      correct: 1,
+    },
+  ],
+  "js-async-await": [
+    {
+      question: "Что вернёт `await 5`?",
+      options: ["Promise<5>", "5", "ошибка — нельзя await на не-промисе", "undefined"],
+      correct: 1,
+      explanation: "await любого значения возвращает само значение (через одну микротаску).",
+    },
+  ],
+
+  // ── TypeScript ─────────────────────────────────────────────────
+  "ts-basics": [
+    {
+      question: "В чём ключевое отличие any от unknown?",
+      options: [
+        "Они одинаковы",
+        "any выключает проверки; unknown — безопасный any, требует narrowing",
+        "unknown быстрее",
+        "any — для примитивов, unknown — для объектов",
+      ],
+      correct: 1,
+    },
+    {
+      question: "Что такое never?",
+      options: [
+        "значение которое не используется",
+        "тип функций, которые никогда не возвращают нормально",
+        "то же что void",
+        "тип null",
+      ],
+      correct: 1,
+    },
+  ],
+  "ts-interface-vs-type": [
+    {
+      question: "Что умеет interface, чего не умеет type?",
+      options: [
+        "Принимать generic-параметры",
+        "Declaration merging — несколько объявлений сливаются",
+        "Описывать union",
+        "Использовать infer",
+      ],
+      correct: 1,
+    },
+  ],
+  "ts-utility-types": [
+    {
+      question: "Что делает `Partial<User>`?",
+      options: [
+        "Делает все поля required",
+        "Делает все поля optional",
+        "Удаляет поля",
+        "Делает поля readonly",
+      ],
+      correct: 1,
+    },
+    {
+      question: "`Omit<User, 'password'>` — это…",
+      options: [
+        "тип с одним полем password",
+        "User без поля password",
+        "ошибка",
+        "Pick<User, 'password'>",
+      ],
+      correct: 1,
+    },
+  ],
+  "ts-conditional-types": [
+    {
+      question: "Что выведет: `type X = (string | number) extends string ? 'y' : 'n'`?",
+      options: ["'y'", "'n'", "'y' | 'n'", "ошибка"],
+      correct: 1,
+      explanation:
+        "Это НЕ голый параметр, а вычисленный тип. Дистрибуция работает только на голых generic-параметрах. (string|number) целиком не присваивается к string.",
+    },
+  ],
+  "ts-discriminated-unions": [
+    {
+      question: "Зачем поле-тег (`kind`/`type`) в union?",
+      options: [
+        "Это требование TS",
+        "Чтобы TS мог надёжно сузить тип в switch/if",
+        "Для сериализации",
+        "Не нужно никогда",
+      ],
+      correct: 1,
+    },
+  ],
+  "ts-assertions": [
+    {
+      question: "Чем satisfies отличается от as?",
+      options: [
+        "Одно и то же",
+        "satisfies проверяет совместимость, НЕ меняя выведенного типа",
+        "as безопаснее",
+        "satisfies — только для классов",
+      ],
+      correct: 1,
+    },
+  ],
 };
 
 export function getQuizForTopic(topicId: string): QuizQuestion[] | undefined {

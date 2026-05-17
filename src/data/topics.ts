@@ -4652,6 +4652,13 @@ export default function App() {
 ];
 
 // Плоский список всех топиков (удобно для роутинга)
+import { jsAdvancedBlock } from "./topics-js-advanced";
+import { typescriptBlock } from "./topics-typescript";
+
+// Append the new tracks to the existing blocks array. Kept here (rather than
+// editing the literal above) so the original 4655-line block stays untouched.
+blocks.push(jsAdvancedBlock, typescriptBlock);
+
 export const allTopics: Topic[] = blocks.flatMap((b) => b.topics);
 
 export function findTopic(id: string): Topic | undefined {
